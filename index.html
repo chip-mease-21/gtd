@@ -1,0 +1,2627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>GTD — Chip</title>
+  <style>
+    :root {
+      --bg: #eef1f8;
+      --surface: #ffffff;
+      --sidebar-bg: #08111f;
+      --border: #e0e6f0;
+      --text: #0f172a;
+      --muted: #64748b;
+      --accent: #2563eb;
+      --accent-light: #eff6ff;
+      --radius: 12px;
+      --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 8px rgba(0,0,0,0.04);
+      --shadow-md: 0 4px 16px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.06);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── CAPTURE BAR ── */
+    .capture-bar {
+      background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
+      padding: 12px 20px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-shrink: 0;
+      z-index: 10;
+      box-shadow: 0 2px 12px rgba(37,99,235,0.35);
+    }
+    .capture-bar input {
+      flex: 1;
+      background: rgba(255,255,255,0.14);
+      border: 1px solid rgba(255,255,255,0.22);
+      border-radius: 9px;
+      padding: 9px 16px;
+      font-size: 14px;
+      color: white;
+      outline: none;
+      font-family: inherit;
+    }
+    .capture-bar input::placeholder { color: rgba(255,255,255,0.45); }
+    .capture-bar input:focus { background: rgba(255,255,255,0.22); border-color: rgba(255,255,255,0.55); }
+    .capture-btn {
+      background: rgba(255,255,255,0.96);
+      color: var(--accent);
+      border: none;
+      border-radius: 9px;
+      padding: 9px 18px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      white-space: nowrap;
+      letter-spacing: 0.01em;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+      transition: all 0.12s;
+    }
+    .capture-btn:hover { background: white; transform: translateY(-1px); box-shadow: 0 3px 8px rgba(0,0,0,0.2); }
+
+    /* ── LAYOUT ── */
+    .app { display: flex; flex: 1; overflow: hidden; }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      width: 226px;
+      min-width: 226px;
+      background: var(--sidebar-bg);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      padding: 0 0 24px;
+      border-right: 1px solid rgba(255,255,255,0.04);
+    }
+    .sidebar::-webkit-scrollbar { width: 0; }
+    .sidebar-logo {
+      padding: 20px 18px 18px;
+      font-size: 11px;
+      font-weight: 800;
+      color: rgba(255,255,255,0.35);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .sidebar-logo::before {
+      content: '◈';
+      color: var(--accent);
+      font-size: 16px;
+      opacity: 0.85;
+    }
+    .sidebar-section {
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.22);
+      padding: 16px 18px 6px;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 14px;
+      margin: 1px 8px;
+      font-size: 13px;
+      color: rgba(255,255,255,0.6);
+      cursor: pointer;
+      border-radius: 8px;
+      transition: background 0.12s, color 0.12s;
+      user-select: none;
+      position: relative;
+    }
+    .nav-item:hover { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.88); }
+    .nav-item.active {
+      background: rgba(37,99,235,0.22);
+      color: white;
+      font-weight: 600;
+    }
+    .nav-item.active::before {
+      content: '';
+      position: absolute;
+      left: -8px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 60%;
+      background: var(--accent);
+      border-radius: 0 3px 3px 0;
+    }
+    .nav-icon { font-size: 14px; width: 20px; text-align: center; flex-shrink: 0; }
+    .nav-label { flex: 1; letter-spacing: 0.01em; }
+    .nav-badge {
+      background: rgba(255,255,255,0.10);
+      color: rgba(255,255,255,0.65);
+      font-size: 10px;
+      font-weight: 700;
+      border-radius: 10px;
+      padding: 2px 7px;
+      min-width: 20px;
+      text-align: center;
+    }
+    .nav-item.active .nav-badge { background: rgba(37,99,235,0.4); color: rgba(255,255,255,0.9); }
+    .nav-badge.hot { background: #c8622a; color: white; }
+    .tag-row {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 8px 14px;
+      margin: 1px 8px;
+      font-size: 13px;
+      color: rgba(255,255,255,0.55);
+      cursor: pointer;
+      border-radius: 8px;
+      transition: background 0.12s, color 0.12s;
+    }
+    .tag-row:hover { background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.88); }
+    .tag-row.active { background: rgba(37,99,235,0.22); color: white; font-weight: 500; }
+    .tag-dot { width: 8px; height: 8px; min-width: 8px; border-radius: 50%; }
+    .tag-add {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 8px 14px;
+      margin: 1px 8px;
+      font-size: 12px;
+      color: rgba(255,255,255,0.25);
+      cursor: pointer;
+      border-radius: 8px;
+      transition: all 0.12s;
+    }
+    .tag-add:hover { color: rgba(255,255,255,0.6); background: rgba(255,255,255,0.05); }
+
+    /* ── MAIN ── */
+    .main {
+      flex: 1;
+      overflow-y: auto;
+      padding: 32px 36px 56px;
+    }
+    .view-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+    .view-title { font-size: 24px; font-weight: 800; letter-spacing: -0.02em; color: var(--text); }
+    .view-count { font-size: 13px; color: var(--muted); margin-left: 10px; font-weight: 400; }
+
+    /* Tag filter chips */
+    .filter-row { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
+    .filter-label { font-size: 11px; color: var(--muted); }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1.5px solid transparent;
+      opacity: 0.55;
+      transition: opacity 0.12s, border-color 0.12s;
+      user-select: none;
+    }
+    .chip:hover { opacity: 0.85; }
+    .chip.on { opacity: 1; border-color: currentColor; }
+
+    /* Item rows */
+    .item-list { display: flex; flex-direction: column; }
+    .item-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 13px 15px;
+      margin-bottom: 5px;
+      cursor: pointer;
+      transition: box-shadow 0.15s, border-color 0.15s, transform 0.1s;
+    }
+    .item-row:hover {
+      box-shadow: var(--shadow-md);
+      border-color: #c8d4ed;
+      transform: translateY(-1px);
+    }
+    .item-cb { width: 17px; height: 17px; min-width: 17px; accent-color: var(--accent); cursor: pointer; margin-top: 2px; }
+    .item-body { flex: 1; min-width: 0; }
+    .item-text { font-size: 14px; line-height: 1.5; font-weight: 500; color: var(--text); }
+    .item-text.done { text-decoration: line-through; color: var(--muted); font-weight: 400; }
+    .item-meta { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; align-items: center; }
+    .item-tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .item-waiting-badge { font-size: 11px; color: var(--muted); }
+    .item-proj-badge { font-size: 11px; color: var(--muted); font-style: italic; }
+    .item-chevron { color: #cbd5e1; font-size: 16px; align-self: center; }
+
+    /* Section divider */
+    .section-divider {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      font-weight: 800;
+      color: var(--muted);
+      padding: 20px 0 8px;
+    }
+
+    /* Empty state */
+    .empty { text-align: center; padding: 64px 20px; color: var(--muted); }
+    .empty .e-icon { font-size: 40px; margin-bottom: 12px; }
+    .empty h3 { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+    .empty p { font-size: 13px; max-width: 300px; margin: 0 auto; line-height: 1.6; }
+
+    /* Projects */
+    .proj-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 10px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      transition: box-shadow 0.15s;
+    }
+    .proj-card:hover { box-shadow: var(--shadow-md); }
+    .proj-head {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      padding: 14px 17px;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.1s;
+    }
+    .proj-head:hover { background: #f8faff; }
+    .proj-arrow { font-size: 10px; color: #94a3b8; width: 14px; transition: transform 0.15s; }
+    .proj-arrow.open { transform: rotate(90deg); }
+    .proj-name { font-size: 14px; font-weight: 700; flex: 1; letter-spacing: -0.01em; }
+    .proj-tags { display: flex; gap: 5px; }
+    .proj-tally { font-size: 12px; color: var(--muted); white-space: nowrap; }
+    .proj-menu-btn { background: none; border: none; color: var(--muted); font-size: 18px; line-height: 1; cursor: pointer; padding: 0 2px; border-radius: 5px; transition: all 0.12s; }
+    .proj-menu-btn:hover { color: var(--accent); background: var(--accent-light); }
+    .proj-body { border-top: 1px solid var(--border); padding: 6px 17px 14px; background: #fafbff; }
+    .proj-task {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 0;
+      border-bottom: 1px solid #f0f4fc;
+    }
+    .proj-task:last-of-type { border-bottom: none; }
+    .proj-task-text { flex: 1; font-size: 13px; cursor: pointer; line-height: 1.45; font-weight: 500; }
+    .proj-task-text:hover { color: var(--accent); }
+    .proj-task-text.done { text-decoration: line-through; color: var(--muted); font-weight: 400; }
+    .proj-add-task {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 9px 0 2px;
+      font-size: 12px;
+      color: #94a3b8;
+      cursor: pointer;
+      transition: color 0.1s;
+    }
+    .proj-add-task:hover { color: var(--accent); }
+    .new-proj-btn {
+      width: 100%;
+      background: none;
+      border: 1.5px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 14px 17px;
+      font-size: 13px;
+      color: var(--muted);
+      cursor: pointer;
+      font-family: inherit;
+      text-align: left;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 500;
+    }
+    .new-proj-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+
+    /* ── MODAL ── */
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(8,17,31,0.5);
+      backdrop-filter: blur(2px);
+      -webkit-backdrop-filter: blur(2px);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+    }
+    .overlay.open { display: flex; }
+    .modal {
+      background: var(--surface);
+      border-radius: 16px;
+      padding: 28px 30px;
+      max-width: 500px;
+      width: 94%;
+      max-height: 92vh;
+      overflow-y: auto;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.22), 0 4px 16px rgba(0,0,0,0.1);
+    }
+    .modal-title { font-size: 16px; font-weight: 800; margin-bottom: 20px; letter-spacing: -0.01em; }
+    .field { margin-bottom: 15px; }
+    .field label {
+      display: block;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 5px;
+    }
+    /* Checkbox rows — immune to .field label block override */
+    .cb-row {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      user-select: none;
+      width: fit-content;
+    }
+    .cb-row input[type="checkbox"] {
+      width: 16px; height: 16px;
+      flex-shrink: 0;
+      cursor: pointer;
+      margin: 0;
+    }
+    .cb-row span {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+      line-height: 1;
+    }
+    .inp {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 11px;
+      font-size: 14px;
+      font-family: inherit;
+      color: var(--text);
+      background: var(--bg);
+      outline: none;
+    }
+    .inp:focus { border-color: var(--accent); background: #fff; }
+    .textarea {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 11px;
+      font-size: 14px;
+      font-family: inherit;
+      color: var(--text);
+      background: var(--bg);
+      outline: none;
+      resize: vertical;
+      min-height: 68px;
+    }
+    .textarea:focus { border-color: var(--accent); background: #fff; }
+    .dest-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+    .dest-btn {
+      padding: 9px 8px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      background: none;
+      font-size: 12px;
+      font-family: inherit;
+      color: var(--muted);
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.1s;
+    }
+    .dest-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+    .dest-btn.on { border-color: var(--accent); background: var(--accent-light); color: var(--accent); font-weight: 600; }
+    .tag-picker { display: flex; gap: 6px; flex-wrap: wrap; min-height: 28px; }
+    .pick-chip {
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1.5px solid transparent;
+      opacity: 0.48;
+      transition: opacity 0.1s, border-color 0.1s;
+      user-select: none;
+    }
+    .pick-chip:hover { opacity: 0.85; }
+    .pick-chip.on { opacity: 1; border-color: currentColor; }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; align-items: center; }
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 9px;
+      padding: 9px 22px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      letter-spacing: 0.01em;
+      box-shadow: 0 2px 8px rgba(37,99,235,0.3);
+      transition: all 0.12s;
+    }
+    .btn-primary:hover { background: #1d4ed8; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(37,99,235,0.4); }
+    .btn-ghost {
+      background: none;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 9px 16px;
+      font-size: 13px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.12s;
+    }
+    .btn-ghost:hover { border-color: #c8d4ed; color: var(--text); background: #f8faff; }
+    .btn-danger {
+      background: none;
+      color: #b94040;
+      border: 1px solid #f0d0d0;
+      border-radius: 9px;
+      padding: 9px 16px;
+      font-size: 13px;
+      cursor: pointer;
+      font-family: inherit;
+      margin-right: auto;
+      transition: all 0.12s;
+    }
+    .btn-danger:hover { background: #fff4f4; border-color: #f5a0a0; }
+    .hidden { display: none !important; }
+
+    /* Notes */
+    .notes-tabs { display: flex; gap: 0; margin-bottom: 20px; border-bottom: 2px solid var(--border); }
+    .notes-tab {
+      padding: 8px 18px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      transition: all 0.12s;
+      user-select: none;
+    }
+    .notes-tab:hover { color: var(--text); }
+    .notes-tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+    .journal-today {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px 18px;
+      margin-bottom: 18px;
+    }
+    .journal-today-date { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 10px; }
+    .journal-ta {
+      width: 100%;
+      border: none;
+      background: transparent;
+      font-size: 14px;
+      font-family: inherit;
+      color: var(--text);
+      resize: none;
+      outline: none;
+      line-height: 1.7;
+      min-height: 180px;
+    }
+    .journal-saved { font-size: 11px; color: var(--accent); text-align: right; margin-top: 8px; height: 14px; transition: opacity 0.3s; }
+    .past-entry { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 5px; overflow: hidden; }
+    .past-entry-head { display: flex; align-items: center; gap: 10px; padding: 10px 14px; cursor: pointer; user-select: none; }
+    .past-entry-head:hover { background: #fafaf7; }
+    .past-entry-date { font-size: 13px; font-weight: 600; flex: 1; }
+    .past-entry-snippet { font-size: 12px; color: var(--muted); max-width: 300px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .past-entry-body { border-top: 1px solid var(--border); padding: 12px 14px; font-size: 14px; line-height: 1.65; color: var(--text); word-break: break-word; }
+    /* Markdown rendered content */
+    .md-body { font-size: 14px; line-height: 1.7; color: var(--text); word-break: break-word; }
+    .md-body h1 { font-size: 18px; font-weight: 800; margin: 14px 0 6px; }
+    .md-body h2 { font-size: 16px; font-weight: 700; margin: 12px 0 5px; }
+    .md-body h3 { font-size: 14px; font-weight: 700; margin: 10px 0 4px; }
+    .md-body p  { margin: 0 0 8px; }
+    .md-body p:last-child { margin-bottom: 0; }
+    .md-body ul, .md-body ol { padding-left: 20px; margin: 4px 0 8px; }
+    .md-body li { margin-bottom: 3px; }
+    .md-body strong { font-weight: 700; }
+    .md-body em { font-style: italic; }
+    .md-body code { background: #f1f5f9; border-radius: 4px; padding: 1px 5px; font-size: 12px; font-family: monospace; }
+    .md-body blockquote { border-left: 3px solid var(--accent); padding: 4px 12px; color: var(--muted); margin: 6px 0; }
+    .md-body hr { border: none; border-top: 1px solid var(--border); margin: 10px 0; }
+    /* Markdown hint bar */
+    .md-hint { font-size: 11px; color: var(--muted); padding: 5px 2px 6px; display: flex; gap: 12px; flex-wrap: wrap; }
+    .md-hint code { background: #f1f5f9; border-radius: 3px; padding: 1px 5px; font-size: 11px; color: #475569; }
+    .note-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 13px 15px; margin-bottom: 6px; cursor: pointer; transition: box-shadow 0.12s, border-color 0.12s; }
+    .note-card:hover { box-shadow: var(--shadow); border-color: #d0cbc4; }
+    .note-card-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+    .note-card-snippet { font-size: 13px; color: var(--muted); line-height: 1.4; margin-bottom: 6px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .note-card-meta { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    .note-card-date { font-size: 11px; color: var(--muted); }
+    .modal-wide { max-width: 620px !important; }
+    .note-textarea { width: 100%; border: 1px solid var(--border); border-radius: 8px; padding: 11px 13px; font-size: 14px; font-family: inherit; color: var(--text); background: var(--bg); outline: none; resize: vertical; min-height: 240px; line-height: 1.7; }
+    .note-textarea:focus { border-color: var(--accent); background: #fff; }
+
+    /* Scrollbar */
+    .main::-webkit-scrollbar { width: 5px; }
+    .main::-webkit-scrollbar-track { background: transparent; }
+    .main::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 3px; }
+
+    /* ── FOCUS MODE ── */
+    .focus-section {
+      background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+      border: 1px solid #bfdbfe;
+      border-radius: 12px;
+      padding: 14px 16px 10px;
+      margin-bottom: 20px;
+    }
+    .focus-section-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #2563eb;
+      margin-bottom: 10px;
+    }
+    .star-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 14px;
+      padding: 0 3px;
+      line-height: 1;
+      opacity: 0.28;
+      transition: opacity 0.12s, transform 0.1s;
+      flex-shrink: 0;
+      align-self: flex-start;
+      margin-top: 2px;
+    }
+    .star-btn:hover { opacity: 0.7; transform: scale(1.2); }
+    .star-btn.on { opacity: 1; }
+
+    /* ── WEEKLY REVIEW ── */
+    .review-step {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: flex-start;
+      gap: 13px;
+      cursor: pointer;
+      transition: box-shadow 0.12s;
+      user-select: none;
+    }
+    .review-step:hover { box-shadow: var(--shadow); }
+    .review-step.checked { opacity: 0.48; }
+    .review-cb { width: 18px; height: 18px; min-width: 18px; accent-color: var(--accent); cursor: pointer; margin-top: 2px; }
+    .review-body { flex: 1; }
+    .review-step-title { font-size: 14px; font-weight: 600; margin-bottom: 3px; }
+    .review-step-desc { font-size: 12px; color: var(--muted); line-height: 1.5; }
+    .review-go { font-size: 11px; color: var(--accent); margin-top: 6px; display: inline-block; cursor: pointer; background: none; border: none; font-family: inherit; padding: 0; }
+    .review-go:hover { text-decoration: underline; }
+    .progress-wrap { background: var(--border); border-radius: 6px; height: 8px; margin-bottom: 20px; overflow: hidden; }
+    .progress-fill { height: 100%; background: var(--accent); border-radius: 6px; transition: width 0.4s; }
+    .recur-badge { font-size: 10px; color: #7c3aed; background: #f5f3ff; border-radius: 10px; padding: 1px 6px; font-weight: 600; }
+
+    /* ── TOAST ── */
+    #toast {
+      position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(12px);
+      background: #1e293b; color: #f8fafc; font-size: 13px; font-weight: 500;
+      padding: 10px 20px; border-radius: 22px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.22);
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.22s, transform 0.22s;
+      z-index: 9999; white-space: nowrap;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ── MOBILE ── */
+    .hamburger-btn {
+      display: none;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px 8px;
+      color: white;
+      font-size: 22px;
+      line-height: 1;
+      border-radius: 8px;
+      transition: background 0.12s;
+      flex-shrink: 0;
+    }
+    .hamburger-btn:hover { background: rgba(255,255,255,0.15); }
+
+    .sidebar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 149;
+    }
+    .sidebar-overlay.open { display: block; }
+
+    @media (max-width: 700px) {
+      /* Show hamburger, shrink capture bar */
+      .hamburger-btn { display: block; }
+      .capture-bar { padding: 10px 12px; gap: 8px; }
+      .capture-bar input { font-size: 15px; padding: 10px 13px; }
+      .capture-btn { padding: 10px 14px; font-size: 13px; }
+
+      /* Sidebar slides in from left as overlay */
+      .sidebar {
+        position: fixed;
+        top: 0; left: 0; bottom: 0;
+        z-index: 150;
+        transform: translateX(-100%);
+        transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
+        width: 270px;
+        min-width: 270px;
+        box-shadow: 4px 0 32px rgba(0,0,0,0.35);
+      }
+      .sidebar.open {
+        transform: translateX(0);
+      }
+
+      /* Main fills full width */
+      .main { padding: 20px 16px 80px; }
+
+      /* Bigger tap targets for nav items */
+      .nav-item { padding: 13px 14px; font-size: 14px; }
+      .nav-icon { font-size: 16px; }
+
+      /* View header */
+      .view-title { font-size: 20px; }
+
+      /* Item rows — more padding for thumbs */
+      .item-row { padding: 14px 13px; gap: 13px; }
+      .item-cb { width: 20px; height: 20px; min-width: 20px; }
+      .item-text { font-size: 15px; }
+
+      /* Project cards */
+      .proj-head { padding: 15px 14px; }
+      .proj-name { font-size: 15px; }
+      .proj-menu-btn { font-size: 22px; padding: 2px 5px; }
+      .proj-task { padding: 10px 0; }
+      .proj-task-text { font-size: 14px; }
+
+      /* Modal — slides up from bottom on mobile */
+      .overlay { align-items: flex-end; }
+      .modal {
+        border-radius: 20px 20px 0 0;
+        max-width: 100%;
+        width: 100%;
+        max-height: 92vh;
+        padding: 24px 20px 36px;
+      }
+      /* Drag handle hint */
+      .modal::before {
+        content: '';
+        display: block;
+        width: 40px;
+        height: 4px;
+        background: var(--border);
+        border-radius: 4px;
+        margin: -8px auto 18px;
+      }
+
+      /* Dest grid — 1 column on narrow phones */
+      .dest-grid { grid-template-columns: 1fr; }
+
+      /* Bigger buttons in modals */
+      .btn-primary, .btn-ghost, .btn-danger { padding: 12px 20px; font-size: 14px; }
+      .inp, .textarea, .note-textarea { font-size: 16px; } /* prevent iOS zoom */
+
+      /* Toast sits above bottom edge */
+      #toast { bottom: 20px; font-size: 14px; padding: 12px 22px; }
+
+      /* Focus section */
+      .focus-section { padding: 13px 13px 10px; }
+
+      /* Chips */
+      .pick-chip { padding: 7px 13px; font-size: 13px; }
+      .chip { padding: 6px 12px; font-size: 13px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Capture Bar -->
+<div class="capture-bar">
+  <button class="hamburger-btn" onclick="toggleSidebar()" aria-label="Menu">☰</button>
+  <input id="cap" type="text" placeholder="Capture anything… press Enter → Inbox" autocomplete="off"/>
+  <button class="capture-btn" onclick="doCapture()">+ Capture</button>
+</div>
+
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+<div class="app">
+  <nav class="sidebar" id="sidebar"></nav>
+  <div class="main" id="main"></div>
+</div>
+
+<!-- Modal -->
+<div class="overlay" id="overlay" onclick="overlayClick(event)">
+  <div class="modal" id="modal-inner"></div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════
+//  TAG COLORS — auto-assigned by name hash
+// ═══════════════════════════════════════
+const PALETTES = [
+  { bg:'#eff6ff', fg:'#1d4ed8' }, // blue
+  { bg:'#f0fdf4', fg:'#15803d' }, // green
+  { bg:'#faf5ff', fg:'#7e22ce' }, // purple
+  { bg:'#fff7ed', fg:'#c2410c' }, // orange
+  { bg:'#fdf2f8', fg:'#be185d' }, // pink
+  { bg:'#f0fdfa', fg:'#0f766e' }, // teal
+  { bg:'#fefce8', fg:'#a16207' }, // amber
+  { bg:'#fff1f2', fg:'#be123c' }, // rose
+  { bg:'#f0f9ff', fg:'#0369a1' }, // sky
+  { bg:'#f5f3ff', fg:'#6d28d9' }, // violet
+];
+
+// Inline markdown renderer — no external dependency
+function md(text) {
+  if (!text) return '';
+  const lines = text.replace(/\r\n/g,'\n').split('\n');
+  let html = '';
+  let inUl = false, inOl = false, inBq = false;
+
+  function closeList() {
+    if (inUl) { html += '</ul>'; inUl = false; }
+    if (inOl) { html += '</ol>'; inOl = false; }
+  }
+  function closeBq() {
+    if (inBq) { html += '</blockquote>'; inBq = false; }
+  }
+  function inline(s) {
+    return s
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+      .replace(/__(.+?)__/g,'<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g,'<em>$1</em>')
+      .replace(/_(.+?)_/g,'<em>$1</em>')
+      .replace(/`(.+?)`/g,'<code>$1</code>')
+      .replace(/\[(.+?)\]\((.+?)\)/g,'<a href="$2" target="_blank">$1</a>');
+  }
+
+  lines.forEach(line => {
+    // Headings
+    if (/^### (.+)/.test(line)) { closeList(); closeBq(); html += `<h3>${inline(line.slice(4))}</h3>`; return; }
+    if (/^## (.+)/.test(line))  { closeList(); closeBq(); html += `<h2>${inline(line.slice(3))}</h2>`; return; }
+    if (/^# (.+)/.test(line))   { closeList(); closeBq(); html += `<h1>${inline(line.slice(2))}</h1>`; return; }
+    // HR
+    if (/^---+$/.test(line.trim())) { closeList(); closeBq(); html += '<hr>'; return; }
+    // Blockquote
+    if (/^> (.*)/.test(line)) {
+      closeList();
+      if (!inBq) { html += '<blockquote>'; inBq = true; }
+      html += `<p>${inline(line.slice(2))}</p>`; return;
+    }
+    closeBq();
+    // Unordered list
+    if (/^[-*+] (.*)/.test(line)) {
+      if (inOl) { html += '</ol>'; inOl = false; }
+      if (!inUl) { html += '<ul>'; inUl = true; }
+      html += `<li>${inline(line.replace(/^[-*+] /,''))}</li>`; return;
+    }
+    // Ordered list
+    if (/^\d+\. (.*)/.test(line)) {
+      if (inUl) { html += '</ul>'; inUl = false; }
+      if (!inOl) { html += '<ol>'; inOl = true; }
+      html += `<li>${inline(line.replace(/^\d+\. /,''))}</li>`; return;
+    }
+    // Blank line
+    if (!line.trim()) { closeList(); html += ''; return; }
+    // Paragraph
+    closeList();
+    html += `<p>${inline(line)}</p>`;
+  });
+
+  closeList(); closeBq();
+  return html;
+}
+
+function tagPalette(name) {
+  const n = [...(name||'')].reduce((a,c) => a + c.charCodeAt(0), 0);
+  return PALETTES[n % PALETTES.length];
+}
+
+// ═══════════════════════════════════════
+//  DATA LAYER
+// ═══════════════════════════════════════
+const DB = {
+  items()      { return JSON.parse(localStorage.getItem('g_items')    || '[]'); },
+  projects()   { return JSON.parse(localStorage.getItem('g_projects') || '[]'); },
+  tags()       { return JSON.parse(localStorage.getItem('g_tags')     || '[]'); },
+  journal()    { return JSON.parse(localStorage.getItem('g_journal')  || '{}'); },
+  savedNotes() { return JSON.parse(localStorage.getItem('g_snotes')   || '[]'); },
+  review()     { return JSON.parse(localStorage.getItem('g_review')   || '{"week":null,"checked":[false,false,false,false,false,false,false,false]}'); },
+  daily()      { return JSON.parse(localStorage.getItem('g_daily')    || '{"date":null,"checked":[false,false,false,false,false,false],"win":""}'); },
+  save(key, val) { localStorage.setItem('g_' + key, JSON.stringify(val)); },
+};
+
+// ═══════════════════════════════════════
+//  APP STATE
+// ═══════════════════════════════════════
+let S = {
+  view: 'inbox',              // inbox | next | projects | waiting | someday | notes
+  tagFilter: null,            // sidebar tag filter → shows tag view
+  nextFilter: null,           // inline tag filter within next actions / saved notes
+  expanded: new Set(),        // expanded project IDs
+  expandedArchive: new Set(), // expanded archive sections per project ID
+  notesTab: 'journal',        // journal | saved
+  expandedEntries: new Set(), // expanded past journal entry dates
+};
+
+// ═══════════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════════
+function render() { renderSidebar(); renderMain(); }
+
+function renderSidebar() {
+  const items    = DB.items();
+  const tags     = DB.tags();
+  const inboxN   = items.filter(i => i.status === 'inbox').length;
+  const nextN    = items.filter(i => i.status === 'next' && !i.done).length;
+  const waitN    = items.filter(i => i.status === 'waiting' && !i.done).length;
+  const focusN   = items.filter(i => i.focus && !i.done).length;
+  const weekN    = items.filter(i => i.week  && !i.done).length;
+
+  const navItems = [
+    { id:'all',      icon:'📋', label:'All Open Tasks',  badge: nextN + waitN },
+    { id:'inbox',    icon:'📥', label:'Inbox',           badge: inboxN, hot: inboxN > 0 },
+    { id:'daily',    icon:'🌅', label:'Daily Review',    badge: null },
+    { id:'focus',    icon:'⭐', label:"Today's Focus",   badge: focusN, hot: focusN > 0 },
+    { id:'week',     icon:'📅', label:"This Week",       badge: weekN,  hot: weekN > 0 },
+    { id:'next',     icon:'⚡', label:'Next Actions',    badge: nextN },
+    { id:'waiting',  icon:'⏳', label:'Waiting For',     badge: waitN },
+    { id:'someday',  icon:'💭', label:'Someday / Maybe', badge: null },
+    { id:'projects', icon:'📁', label:'Projects',        badge: null },
+    { id:'roles',    icon:'👤', label:'Roles',           badge: null },
+    { id:'areas',    icon:'🗺️', label:'Areas',           badge: null },
+    { id:'notes',    icon:'📓', label:'Notes',           badge: null },
+    { id:'search',   icon:'🔍', label:'Search',          badge: null },
+    { id:'review',   icon:'🗓️', label:'Weekly Review',   badge: null },
+  ];
+
+  let h = `<div class="sidebar-logo">GTD</div>`;
+  h += `<div class="sidebar-section">Lists</div>`;
+
+  navItems.forEach(n => {
+    const a = (!S.tagFilter && S.view === n.id) ? ' active' : '';
+    const bHtml = n.badge !== null
+      ? `<span class="nav-badge${n.hot && n.badge > 0 ? ' hot' : ''}">${n.badge}</span>`
+      : '';
+    h += `<div class="nav-item${a}" onclick="setView('${n.id}')">
+            <span class="nav-icon">${n.icon}</span>
+            <span class="nav-label">${n.label}</span>${bHtml}
+          </div>`;
+  });
+
+  h += `<div class="sidebar-section" style="margin-top:8px">Tags</div>`;
+  tags.forEach(tag => {
+    const p = tagPalette(tag);
+    const a = S.tagFilter === tag ? ' active' : '';
+    h += `<div class="tag-row${a}" onclick="toggleTagFilter('${esc(tag)}')">
+            <div class="tag-dot" style="background:${p.fg}"></div>
+            <span style="flex:1">${esc(tag)}</span>
+          </div>`;
+  });
+  h += `<div class="tag-add" onclick="openTagModal()">＋ New Tag</div>`;
+
+  h += `<div style="margin-top:auto;padding:20px 12px 4px">
+    <div onclick="exportBackup()" style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:7px;font-size:12px;color:rgba(255,255,255,0.3);cursor:pointer;transition:all 0.1s" onmouseover="this.style.color='rgba(255,255,255,0.6)'" onmouseout="this.style.color='rgba(255,255,255,0.3)'">
+      ⬇ Backup data
+    </div>
+    <div onclick="importNotionData()" style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:7px;font-size:12px;color:rgba(255,255,255,0.3);cursor:pointer;transition:all 0.1s" onmouseover="this.style.color='rgba(255,255,255,0.6)'" onmouseout="this.style.color='rgba(255,255,255,0.3)'">
+      🔄 Import from Notion
+    </div>
+  </div>`;
+
+  document.getElementById('sidebar').innerHTML = h;
+}
+
+function renderMain() {
+  const el = document.getElementById('main');
+  if (S.tagFilter) { renderTagView(el); return; }
+  switch (S.view) {
+    case 'inbox':    renderInbox(el);    break;
+    case 'next':     renderNext(el);     break;
+    case 'waiting':  renderWaiting(el);  break;
+    case 'someday':  renderSomeday(el);   break;
+    case 'projects': renderProjLike(el, 'project', 'Projects', '📁'); break;
+    case 'roles':    renderProjLike(el, 'role',    'Roles',    '👤'); break;
+    case 'areas':    renderProjLike(el, 'area',    'Areas',    '🗺️'); break;
+    case 'all':      renderAllTasks(el);  break;
+    case 'notes':    renderNotes(el);     break;
+    case 'search':   renderSearch(el);   break;
+    case 'focus':    renderFocusView(el);  break;
+    case 'week':     renderWeekView(el);   break;
+    case 'daily':    renderDailyReview(el); break;
+    case 'review':   renderReview(el);    break;
+  }
+}
+
+function setView(v) { S.view = v; S.tagFilter = null; S.nextFilter = null; closeSidebar(); render(); }
+function toggleTagFilter(t) { S.tagFilter = S.tagFilter === t ? null : t; closeSidebar(); render(); }
+
+// ── MOBILE SIDEBAR ──
+function toggleSidebar() {
+  const sb  = document.getElementById('sidebar');
+  const ov  = document.getElementById('sidebar-overlay');
+  const open = sb.classList.toggle('open');
+  ov.classList.toggle('open', open);
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebar-overlay').classList.remove('open');
+}
+
+// ─── INBOX ─────────────────────────────
+function renderInbox(el) {
+  const items = DB.items().filter(i => i.status === 'inbox');
+  let h = header('📥 Inbox', items.length + ' item' + (items.length !== 1 ? 's' : ''));
+
+  if (!items.length) {
+    h += empty('✅', 'Inbox Zero', 'Use the bar above to capture anything on your mind.');
+  } else {
+    h += `<div class="item-list">`;
+    items.forEach(i => {
+      h += `<div class="item-row" onclick="openItem(${i.id})">
+              <div class="item-body"><div class="item-text">${esc(i.text)}</div></div>
+              <span class="item-chevron">›</span>
+            </div>`;
+    });
+    h += `</div>`;
+    h += `<p style="font-size:12px;color:var(--muted);margin-top:10px">Click an item to process it — assign tags, move to actions, projects, or park it.</p>`;
+  }
+  el.innerHTML = h;
+}
+
+// ─── NEXT ACTIONS ──────────────────────
+function renderNext(el) {
+  const tags  = DB.tags();
+  const projs = DB.projects().filter(p => p.status !== 'done');
+  let items   = DB.items().filter(i => i.status === 'next');
+  if (S.nextFilter) items = items.filter(i => (i.tags||[]).includes(S.nextFilter));
+
+  const active     = items.filter(i => !i.done);
+  const done       = items.filter(i => i.done);
+  const focused    = active.filter(i => i.focus);
+  const activeFilt = active.filter(i => !i.focus); // unfocused items for type groups
+
+  let h = header('⚡ Next Actions', active.length + ' active');
+
+  // tag filter row
+  if (tags.length) {
+    h += `<div class="filter-row"><span class="filter-label">Filter:</span>`;
+    tags.forEach(t => {
+      const p  = tagPalette(t);
+      const on = S.nextFilter === t ? ' on' : '';
+      h += `<span class="chip${on}" style="background:${p.bg};color:${p.fg}" onclick="toggleNextFilter('${esc(t)}')">#${esc(t)}</span>`;
+    });
+    h += `</div>`;
+  }
+
+  // ── Today's Focus section ──
+  if (focused.length) {
+    h += `<div class="focus-section">
+      <div class="focus-section-title">⭐ Today's Focus</div>
+      <div class="item-list">`;
+    focused.forEach(i => { h += itemRow(i, true); });
+    h += `</div></div>`;
+  }
+
+  if (!active.length && !done.length) {
+    h += empty('⚡', 'No next actions', 'Process your inbox or capture a specific task to act on.');
+  } else {
+    // Group unfocused active items by type → project/role/area
+    const TYPES = [
+      { key: 'project', label: 'Projects', icon: '📁' },
+      { key: 'role',    label: 'Roles',    icon: '👤' },
+      { key: 'area',    label: 'Areas',    icon: '🗺️' },
+    ];
+
+    let hasAnyGroup = false;
+    TYPES.forEach(({ key, label, icon }) => {
+      const typeProjs = projs.filter(p => (p.type||'project') === key);
+      const typeItems = activeFilt.filter(i => i.project && typeProjs.some(p => p.id === i.project));
+      if (!typeItems.length) return;
+      hasAnyGroup = true;
+
+      h += `<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);padding:16px 0 8px;display:flex;align-items:center;gap:6px">${icon} ${label}</div>`;
+
+      const groupIds = [...new Set(typeItems.map(i => i.project))];
+      groupIds.forEach(pid => {
+        const proj  = typeProjs.find(p => p.id === pid);
+        const group = typeItems.filter(i => i.project === pid);
+        h += `<div style="font-size:12px;font-weight:600;color:var(--text);padding:4px 0 6px 2px;border-bottom:1px solid var(--border);margin-bottom:4px">${esc(proj ? proj.name : 'Unknown')}</div>`;
+        h += `<div class="item-list" style="margin-bottom:12px">`;
+        group.forEach(i => { h += itemRow(i, true); });
+        h += `</div>`;
+      });
+    });
+
+    // Unlinked
+    const unlinked = activeFilt.filter(i => !i.project);
+    if (unlinked.length) {
+      if (hasAnyGroup) h += `<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);padding:16px 0 8px">Unlinked</div>`;
+      h += `<div class="item-list" style="margin-bottom:12px">`;
+      unlinked.forEach(i => { h += itemRow(i); });
+      h += `</div>`;
+    }
+
+    // Completed (collapsed at bottom)
+    if (done.length) {
+      h += `<div class="section-divider">Completed (${done.length})</div><div class="item-list">`;
+      done.forEach(i => { h += itemRow(i); });
+      h += `</div>`;
+    }
+  }
+  el.innerHTML = h;
+}
+
+function toggleNextFilter(t) { S.nextFilter = S.nextFilter === t ? null : t; renderMain(); }
+
+// ─── TAG VIEW ──────────────────────────
+function renderTagView(el) {
+  const tag   = S.tagFilter;
+  const p     = tagPalette(tag);
+  const items = DB.items().filter(i => (i.tags||[]).includes(tag) && i.status !== 'inbox');
+  const active = items.filter(i => !i.done);
+
+  let h = `<div class="view-header">
+    <div><span class="view-title" style="color:${p.fg}">#${esc(tag)}</span>
+    <span class="view-count">${active.length} active</span></div>
+  </div>`;
+
+  if (!items.length) {
+    h += empty('🏷️', 'No items tagged #' + esc(tag), 'Items you tag with this will appear here.');
+  } else {
+    const statuses = ['next','waiting','someday'];
+    const labels   = { next:'Next Actions', waiting:'Waiting For', someday:'Someday / Maybe' };
+    statuses.forEach(s => {
+      const group = items.filter(i => i.status === s);
+      if (!group.length) return;
+      h += `<div class="section-divider">${labels[s]}</div><div class="item-list">`;
+      group.forEach(i => { h += itemRow(i); });
+      h += `</div>`;
+    });
+  }
+  el.innerHTML = h;
+}
+
+// ─── PROJECTS / ROLES / AREAS (generic) ─
+function renderProjLike(el, type, title, icon) {
+  const all      = DB.projects().filter(p => (p.type||'project') === type);
+  const items    = DB.items();
+  const active   = all.filter(p => p.status !== 'done');
+  const done     = all.filter(p => p.status === 'done');
+  const newLabel = type === 'role' ? 'New Role' : type === 'area' ? 'New Area' : 'New Project';
+  const emptyMsg = type === 'role'
+    ? 'Roles you play — Leader, Husband, Father, Pastor…'
+    : type === 'area'
+    ? 'Areas of ongoing responsibility — Finance, Operations, Health…'
+    : 'A project is any outcome that requires more than one action.';
+
+  let h = `<div class="view-header">
+    <div><span class="view-title">${icon} ${title}</span></div>
+    <button class="btn-primary" style="font-size:12px;padding:7px 14px" onclick="openNewProject('${type}')">+ ${newLabel}</button>
+  </div>`;
+
+  if (!all.length) h += empty(icon, `No ${title.toLowerCase()} yet`, emptyMsg);
+
+  active.forEach(proj => {
+    const pItems  = items.filter(i => i.project === proj.id);
+    const pending = pItems.filter(i => !i.done && i.status !== 'waiting');
+    const waiting = pItems.filter(i => !i.done && i.status === 'waiting');
+    const isOpen  = S.expanded.has(proj.id);
+    const tagsH   = (proj.tags||[]).map(t => {
+      const p = tagPalette(t);
+      return `<span class="item-tag" style="background:${p.bg};color:${p.fg}">#${esc(t)}</span>`;
+    }).join('');
+
+    h += `<div class="proj-card">
+      <div class="proj-head" onclick="toggleProj('${proj.id}')">
+        <span class="proj-arrow${isOpen?' open':''}">▶</span>
+        <span class="proj-name">${esc(proj.name)}</span>
+        <div class="proj-tags">${tagsH}</div>
+        <span class="proj-tally">${pending.length} left${waiting.length ? ` · ${waiting.length} waiting` : ''}</span>
+        <button class="proj-menu-btn" onclick="event.stopPropagation();openAddProjTask('${proj.id}')" title="Add task">＋</button>
+        <button class="proj-menu-btn" onclick="event.stopPropagation();openEditProject('${proj.id}')" title="Edit / Archive / Delete">⋯</button>
+      </div>`;
+
+    if (isOpen) {
+      h += `<div class="proj-body">`;
+      pending.forEach(i => {
+        const rB   = i.recur ? `<span class="recur-badge" style="margin-left:6px">🔁 ${i.recur.freq}</span>` : '';
+        const naB  = i.status === 'next' ? `<span style="font-size:10px;color:#2563eb;background:#eff6ff;border-radius:10px;padding:1px 6px;font-weight:600;margin-left:6px">⚡ Next</span>` : '';
+        h += `<div class="proj-task">
+          <input type="checkbox" class="item-cb" onclick="event.stopPropagation();toggleDone(${i.id})" />
+          <span class="proj-task-text" onclick="openItem(${i.id})">${esc(i.text)}${naB}${rB}</span>
+        </div>`;
+      });
+      const doneItems = pItems.filter(i => i.done);
+      if (doneItems.length) {
+        const archOpen = S.expandedArchive.has(proj.id);
+        h += `<div onclick="event.stopPropagation();toggleArchive('${proj.id}')"
+          style="display:flex;align-items:center;gap:6px;padding:9px 0 4px;margin-top:4px;border-top:1px solid var(--border);font-size:12px;color:var(--muted);cursor:pointer;user-select:none;transition:color 0.1s"
+          onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">
+          <span style="font-size:11px">${archOpen ? '▼' : '▶'}</span>
+          <span>📦 Archived — ${doneItems.length} task${doneItems.length !== 1 ? 's' : ''}</span>
+        </div>`;
+        if (archOpen) {
+          h += `<div style="padding-bottom:4px">`;
+          doneItems.forEach(i => {
+            h += `<div class="proj-task" style="opacity:0.65">
+              <input type="checkbox" class="item-cb" checked onclick="event.stopPropagation();toggleDone(${i.id})" />
+              <span class="proj-task-text done" onclick="openItem(${i.id})">${esc(i.text)}</span>
+            </div>`;
+          });
+          h += `</div>`;
+        }
+      }
+      if (waiting.length) {
+        h += `<div style="font-size:10px;color:var(--muted);padding:8px 0 2px;text-transform:uppercase;letter-spacing:0.08em">⏳ Waiting</div>`;
+        waiting.forEach(i => {
+          h += `<div class="proj-task">
+            <span style="font-size:12px;color:var(--muted);width:16px">⏳</span>
+            <span class="proj-task-text" onclick="openItem(${i.id})">${esc(i.text)}${i.waitingFor ? ` <span style="color:var(--muted);font-size:11px">· ${esc(i.waitingFor)}</span>` : ''}</span>
+          </div>`;
+        });
+      }
+      h += `<div class="proj-add-task" onclick="openAddProjTask('${proj.id}')">＋ Add task</div>`;
+      h += `</div>`;
+    }
+    h += `</div>`;
+  });
+
+  if (done.length) {
+    h += `<div class="section-divider">Completed</div><div class="item-list">`;
+    done.forEach(proj => {
+      h += `<div class="item-row" onclick="openEditProject('${proj.id}')">
+        <div class="item-body"><div class="item-text done">${esc(proj.name)}</div></div>
+        <span class="item-chevron">›</span></div>`;
+    });
+    h += `</div>`;
+  }
+
+  el.innerHTML = h;
+}
+
+function toggleProj(id) {
+  S.expanded.has(id) ? S.expanded.delete(id) : S.expanded.add(id);
+  renderMain();
+}
+
+function toggleArchive(projId) {
+  S.expandedArchive.has(projId) ? S.expandedArchive.delete(projId) : S.expandedArchive.add(projId);
+  renderMain();
+}
+
+// ─── ALL OPEN TASKS ────────────────────
+function renderAllTasks(el) {
+  const tags  = DB.tags();
+  const projs = DB.projects();
+  let items   = DB.items().filter(i => (i.status === 'next' || i.status === 'waiting') && !i.done);
+  if (S.nextFilter) items = items.filter(i => (i.tags||[]).includes(S.nextFilter));
+
+  const total = DB.items().filter(i => (i.status==='next'||i.status==='waiting') && !i.done).length;
+
+  let h = header('📋 All Open Tasks', items.length + (S.nextFilter ? ` shown · ${total} total` : ` task${items.length!==1?'s':''}`));
+
+  if (tags.length) {
+    h += `<div class="filter-row"><span class="filter-label">Filter:</span>`;
+    tags.forEach(t => {
+      const p  = tagPalette(t);
+      const on = S.nextFilter === t ? ' on' : '';
+      h += `<span class="chip${on}" style="background:${p.bg};color:${p.fg}" onclick="toggleNextFilter('${esc(t)}')">#${esc(t)}</span>`;
+    });
+    h += `</div>`;
+  }
+
+  if (!items.length) {
+    h += empty('📋', 'No open tasks', S.nextFilter ? 'Nothing with that tag. Clear the filter to see all.' : 'Your plate is clear.');
+  } else {
+    // Group: linked (has project/role/area), then unlinked
+    const linked   = items.filter(i => i.project);
+    const unlinked = items.filter(i => !i.project);
+
+    // Build grouped output by project/role/area
+    const groupIds = [...new Set(linked.map(i => i.project))];
+    if (groupIds.length) {
+      groupIds.forEach(pid => {
+        const proj  = projs.find(p => p.id === pid);
+        const pType = proj ? (proj.type||'project') : 'project';
+        const pIcon = pType==='role' ? '👤' : pType==='area' ? '🗺️' : '📁';
+        const group = linked.filter(i => i.project === pid);
+        h += `<div class="section-divider">${pIcon} ${esc(proj ? proj.name : 'Unknown')}</div>
+              <div class="item-list">`;
+        group.forEach(i => { h += itemRow(i); });
+        h += `</div>`;
+      });
+    }
+
+    if (unlinked.length) {
+      if (groupIds.length) h += `<div class="section-divider">Unlinked</div>`;
+      h += `<div class="item-list">`;
+      unlinked.forEach(i => { h += itemRow(i); });
+      h += `</div>`;
+    }
+  }
+  el.innerHTML = h;
+}
+
+// ─── WAITING FOR ───────────────────────
+function renderWaiting(el) {
+  const items = DB.items().filter(i => i.status === 'waiting' && !i.done);
+  let h = header('⏳ Waiting For', items.length + ' item' + (items.length !== 1 ? 's' : ''));
+
+  if (!items.length) {
+    h += empty('⏳', 'Nothing waiting', "Items you've delegated or are waiting on someone else for.");
+  } else {
+    h += `<div class="item-list">`;
+    items.forEach(i => {
+      const tagsH = (i.tags||[]).map(t => {
+        const p = tagPalette(t);
+        return `<span class="item-tag" style="background:${p.bg};color:${p.fg}">#${esc(t)}</span>`;
+      }).join('');
+      h += `<div class="item-row" onclick="openItem(${i.id})">
+        <div class="item-body">
+          <div class="item-text">${esc(i.text)}</div>
+          <div class="item-meta">
+            ${i.waitingFor ? `<span class="item-waiting-badge">👤 ${esc(i.waitingFor)}</span>` : ''}
+            ${tagsH}
+          </div>
+        </div>
+        <span class="item-chevron">›</span>
+      </div>`;
+    });
+    h += `</div>`;
+  }
+  el.innerHTML = h;
+}
+
+// ─── SOMEDAY / MAYBE ───────────────────
+function renderSomeday(el) {
+  const items = DB.items().filter(i => i.status === 'someday');
+  let h = header('💭 Someday / Maybe', items.length + ' idea' + (items.length !== 1 ? 's' : ''));
+
+  if (!items.length) {
+    h += empty('💭', 'Nothing parked here', "Ideas you're not ready to act on yet — but don't want to forget.");
+  } else {
+    h += `<div class="item-list">`;
+    items.forEach(i => {
+      const tagsH = (i.tags||[]).map(t => {
+        const p = tagPalette(t);
+        return `<span class="item-tag" style="background:${p.bg};color:${p.fg}">#${esc(t)}</span>`;
+      }).join('');
+      h += `<div class="item-row" onclick="openItem(${i.id})">
+        <div class="item-body">
+          <div class="item-text">${esc(i.text)}</div>
+          <div class="item-meta">${tagsH}</div>
+        </div>
+        <span class="item-chevron">›</span>
+      </div>`;
+    });
+    h += `</div>`;
+  }
+  el.innerHTML = h;
+}
+
+// ─── HELPERS ───────────────────────────
+function header(title, subtitle) {
+  return `<div class="view-header">
+    <div><span class="view-title">${title}</span><span class="view-count">${subtitle}</span></div>
+  </div>`;
+}
+function empty(icon, title, msg) {
+  return `<div class="empty"><div class="e-icon">${icon}</div><h3>${title}</h3><p>${msg}</p></div>`;
+}
+function itemRow(item, hideProj = false) {
+  const tagsH = (item.tags||[]).map(t => {
+    const p = tagPalette(t);
+    return `<span class="item-tag" style="background:${p.bg};color:${p.fg}">#${esc(t)}</span>`;
+  }).join('');
+  const linkedProj = item.project ? DB.projects().find(p => p.id === item.project) : null;
+  const linkIcon   = linkedProj ? (linkedProj.type==='role'?'👤':linkedProj.type==='area'?'🗺️':'📁') : '';
+  const projH    = (!hideProj && linkedProj) ? `<span class="item-proj-badge">${linkIcon} ${esc(linkedProj.name)}</span>` : '';
+  const waitH    = item.waitingFor ? `<span class="item-waiting-badge">👤 ${esc(item.waitingFor)}</span>` : '';
+  const waitIcon = item.status === 'waiting' ? `<span style="font-size:11px;color:var(--muted)">⏳</span>` : '';
+  const recurH   = item.recur ? `<span class="recur-badge">🔁 ${item.recur.freq}</span>` : '';
+  const weekH    = item.week  ? `<span style="font-size:10px;color:#0891b2;background:#ecfeff;border-radius:10px;padding:1px 6px;font-weight:600">📅 This Week</span>` : '';
+  const starCls  = item.focus ? ' on' : '';
+  return `<div class="item-row" onclick="openItem(${item.id})">
+    <button class="star-btn${starCls}" onclick="event.stopPropagation();toggleFocus(${item.id})" title="Toggle Today's Focus">⭐</button>
+    <input type="checkbox" class="item-cb" ${item.done?'checked':''} onclick="event.stopPropagation();toggleDone(${item.id})" />
+    <div class="item-body">
+      <div class="item-text${item.done?' done':''}">${esc(item.text)}</div>
+      <div class="item-meta">${waitIcon}${recurH}${weekH}${tagsH}${projH}${waitH}</div>
+    </div>
+    <span class="item-chevron">›</span>
+  </div>`;
+}
+
+// ═══════════════════════════════════════
+//  CAPTURE
+// ═══════════════════════════════════════
+document.getElementById('cap').addEventListener('keydown', e => { if (e.key === 'Enter') doCapture(); });
+
+function doCapture() {
+  const el  = document.getElementById('cap');
+  const txt = el.value.trim();
+  if (!txt) return;
+  const items = DB.items();
+  items.push({ id: Date.now(), text: txt, status: 'inbox', tags: [], done: false, notes: '', project: null, waitingFor: '', created: Date.now(), focus: false, recur: null });
+  DB.save('items', items);
+  el.value = '';
+  S.view = 'inbox'; S.tagFilter = null;
+  render();
+}
+
+// ═══════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════
+let _toastTimer;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => el.classList.remove('show'), 3200);
+}
+
+// ═══════════════════════════════════════
+//  TOGGLE DONE
+// ═══════════════════════════════════════
+function toggleDone(id) {
+  const items = DB.items();
+  const item  = items.find(i => i.id === id);
+  if (!item) return;
+  item.done = !item.done;
+  // Auto-regenerate when a recurring task is completed
+  if (item.done && item.recur) {
+    items.push({
+      id:          Date.now() + Math.floor(Math.random() * 999),
+      text:        item.text,
+      status:      item.status,
+      tags:        [...(item.tags||[])],
+      done:        false,
+      notes:       item.notes || '',
+      project:     item.project || null,
+      waitingFor:  item.waitingFor || '',
+      created:     Date.now(),
+      recur:       { ...item.recur },
+      focus:       false,
+    });
+    showToast(`🔁 Done! Next ${item.recur.freq} recurrence created.`);
+  }
+  DB.save('items', items);
+  render();
+}
+
+// ═══════════════════════════════════════
+//  ITEM MODAL  (process inbox + edit)
+// ═══════════════════════════════════════
+function openItem(id) {
+  const items    = DB.items();
+  const projects = DB.projects();
+  const tags     = DB.tags();
+  const item     = items.find(i => i.id === id);
+  if (!item) return;
+
+  const isInbox = item.status === 'inbox';
+  // inbox items have no pre-selection — user must choose; all others default to their current status
+  const curDest = item.status === 'inbox'
+    ? null
+    : (item.status === 'waiting' || item.status === 'someday')
+      ? item.status
+      : 'next';
+
+  const dests = [
+    { id:'next',    label:'⚡ Next Action' },
+    { id:'waiting', label:'⏳ Waiting For' },
+    { id:'someday', label:'💭 Someday' },
+  ];
+
+  const destHtml = dests.map(d =>
+    `<button class="dest-btn${curDest===d.id?' on':''}" data-dest="${d.id}" onclick="pickDest(this)">${d.label}</button>`
+  ).join('');
+
+  const activeProjs = projects.filter(p => p.status !== 'done');
+  const mkOpts = (type, label) => {
+    const group = activeProjs.filter(p => (p.type||'project') === type);
+    if (!group.length) return '';
+    return `<optgroup label="${label}">${group.map(p => `<option value="${esc(p.id)}" ${item.project===p.id?'selected':''}>${esc(p.name)}</option>`).join('')}</optgroup>`;
+  };
+  const projOptions = mkOpts('project','📁 Projects') + mkOpts('role','👤 Roles') + mkOpts('area','🗺️ Areas');
+
+  const tagsHtml = tags.length
+    ? tags.map(t => {
+        const p = tagPalette(t);
+        const on = (item.tags||[]).includes(t) ? ' on' : '';
+        return `<span class="pick-chip${on}" data-tag="${esc(t)}" style="background:${p.bg};color:${p.fg}" onclick="togglePickTag(this)">#${esc(t)}</span>`;
+      }).join('')
+    : `<span style="font-size:12px;color:var(--muted)">Add tags via the sidebar first.</span>`;
+
+  const projVis    = '';  // always visible — any destination can be linked to a project
+  const waitingVis = curDest === 'waiting' ? '' : ' hidden';
+  const recurVal   = item.recur ? item.recur.freq : '';
+
+  showModal(`
+    <div class="modal-title">${isInbox ? '📥 Process Item' : '✏️ Edit Item'}</div>
+    <input type="hidden" id="m-id" value="${id}" />
+    <div class="field">
+      <label>Action / Task</label>
+      <input class="inp" id="m-text" type="text" value="${escAttr(item.text)}" />
+    </div>
+    <div class="field">
+      <label>Move to</label>
+      <div class="dest-grid" id="dest-grid">${destHtml}</div>
+    </div>
+    <div class="field${projVis}" id="f-proj">
+      <label>Linked to (Project, Role, or Area)</label>
+      <select class="inp" id="m-proj">
+        <option value="">— unlinked —</option>
+        ${projOptions}
+      </select>
+    </div>
+    <div class="field${waitingVis}" id="f-wait">
+      <label>Waiting on (person or group)</label>
+      <input class="inp" id="m-wait" type="text" placeholder="e.g. Marcus, Elder Board…" value="${escAttr(item.waitingFor||'')}" />
+    </div>
+    <div class="field">
+      <label>Tags</label>
+      <div class="tag-picker" id="tag-picker">${tagsHtml}</div>
+    </div>
+    <div class="field">
+      <label>Recurring</label>
+      <select class="inp" id="m-recur">
+        <option value="">One-time only</option>
+        <option value="daily"   ${recurVal==='daily'  ?'selected':''}>🔁 Daily</option>
+        <option value="weekly"  ${recurVal==='weekly' ?'selected':''}>🔁 Weekly</option>
+        <option value="monthly" ${recurVal==='monthly'?'selected':''}>🔁 Monthly</option>
+      </select>
+    </div>
+    <hr style="border:none;border-top:1px solid var(--border);margin:4px 0 14px"/>
+    <div class="field">
+      <label>Priority Flags</label>
+      <label class="cb-row">
+        <input type="checkbox" id="m-focus" ${item.focus?'checked':''} style="accent-color:var(--accent)"/>
+        <span>⭐ Today's Focus</span>
+      </label>
+      <label class="cb-row">
+        <input type="checkbox" id="m-week" ${item.week?'checked':''} style="accent-color:#0891b2"/>
+        <span>📅 Due This Week</span>
+      </label>
+    </div>
+    <div class="field">
+      <label>Notes</label>
+      <textarea class="textarea" id="m-notes" placeholder="Context, details, or reference…">${esc(item.notes||'')}</textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-danger" onclick="deleteItem(${id})">Delete</button>
+      <button class="btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn-primary" onclick="saveItem()">Save</button>
+    </div>
+  `);
+  document.getElementById('m-text').focus();
+}
+
+function pickDest(btn) {
+  const wasOn = btn.classList.contains('on');
+  document.querySelectorAll('#dest-grid .dest-btn').forEach(b => b.classList.remove('on'));
+  if (!wasOn) btn.classList.add('on');
+  const dest = btn.classList.contains('on') ? btn.dataset.dest : null;
+  document.getElementById('f-wait').classList.toggle('hidden', dest !== 'waiting');
+}
+
+function togglePickTag(chip) { chip.classList.toggle('on'); }
+
+function saveItem() {
+  const id     = parseInt(document.getElementById('m-id').value);
+  const items  = DB.items();
+  const item   = items.find(i => i.id === id);
+  if (!item) return;
+
+  item.text  = document.getElementById('m-text').value.trim() || item.text;
+  item.notes = document.getElementById('m-notes').value;
+  item.tags  = [...document.querySelectorAll('#tag-picker .pick-chip.on')].map(c => c.dataset.tag);
+  item.focus = document.getElementById('m-focus')?.checked || false;
+  item.week  = document.getElementById('m-week')?.checked  || false;
+  const recurFreq = document.getElementById('m-recur')?.value;
+  item.recur = recurFreq ? { freq: recurFreq } : null;
+
+  const destBtn = document.querySelector('#dest-grid .dest-btn.on');
+  const dest    = destBtn ? destBtn.dataset.dest : null;
+
+  // Always save project link regardless of whether a destination was picked
+  item.project = document.getElementById('m-proj')?.value || null;
+
+  if (dest) {
+    item.status = dest;
+  } else if (item.project) {
+    // Has a project/role/area — never goes to Inbox.
+    // If coming from inbox with no dest chosen, default to Next Action.
+    // If user explicitly cleared all dest buttons, move to Someday (parked, not active).
+    if (item.status === 'inbox') {
+      item.status = 'next';
+    } else {
+      item.status = 'someday';
+    }
+  } else {
+    // No project — clearing destination sends it to Inbox for processing
+    item.status = 'inbox';
+  }
+
+  if (item.status === 'waiting') {
+    item.waitingFor = document.getElementById('m-wait').value.trim();
+  }
+
+  DB.save('items', items);
+  closeModal();
+  render();
+}
+
+function deleteItem(id) {
+  if (!confirm('Delete this item?')) return;
+  DB.save('items', DB.items().filter(i => i.id !== id));
+  closeModal();
+  render();
+}
+
+// ═══════════════════════════════════════
+//  PROJECT MODALS
+// ═══════════════════════════════════════
+function openNewProject(type = 'project') {
+  const tags     = DB.tags();
+  const tagsHtml = tags.length
+    ? tags.map(t => {
+        const p = tagPalette(t);
+        return `<span class="pick-chip" data-tag="${esc(t)}" style="background:${p.bg};color:${p.fg}" onclick="togglePickTag(this)">#${esc(t)}</span>`;
+      }).join('')
+    : `<span style="font-size:12px;color:var(--muted)">Add tags via the sidebar first.</span>`;
+
+  const icons    = { project:'📁', role:'👤', area:'🗺️' };
+  const labels   = { project:'Project', role:'Role', area:'Area' };
+  const ph       = { project:'e.g. Vision 2026, Capital Campaign…', role:'e.g. Executive Director, Husband, Father…', area:'e.g. Finance, Operations, Team Health…' };
+  const notePh   = { project:'What does done look like?', role:'What does faithfulness in this role look like?', area:'What does health in this area look like?' };
+
+  showModal(`
+    <div class="modal-title">${icons[type]} New ${labels[type]}</div>
+    <input type="hidden" id="np-type" value="${type}" />
+    <div class="field">
+      <label>${labels[type]} Name</label>
+      <input class="inp" id="np-name" type="text" placeholder="${ph[type]}" />
+    </div>
+    <div class="field">
+      <label>Tags</label>
+      <div class="tag-picker" id="tag-picker">${tagsHtml}</div>
+    </div>
+    <div class="field">
+      <label>Notes</label>
+      <textarea class="textarea" id="np-notes" placeholder="${notePh[type]}"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn-primary" onclick="saveNewProject()">Create</button>
+    </div>
+  `);
+  document.getElementById('np-name').focus();
+  document.getElementById('np-name').addEventListener('keydown', e => { if (e.key === 'Enter') saveNewProject(); });
+}
+
+function saveNewProject() {
+  const name = document.getElementById('np-name').value.trim();
+  if (!name) { document.getElementById('np-name').focus(); return; }
+  const type     = document.getElementById('np-type').value || 'project';
+  const tags     = [...document.querySelectorAll('#tag-picker .pick-chip.on')].map(c => c.dataset.tag);
+  const notes    = document.getElementById('np-notes').value;
+  const projects = DB.projects();
+  const id       = 'p_' + Date.now();
+  projects.push({ id, name, type, tags, notes, status: 'active', created: Date.now() });
+  DB.save('projects', projects);
+  S.expanded.add(id);
+  closeModal();
+  S.view = type === 'role' ? 'roles' : type === 'area' ? 'areas' : 'projects';
+  S.tagFilter = null;
+  render();
+}
+
+function openAddProjTask(projId) {
+  // Step 1: quick name capture, then opens full task workspace
+  showModal(`
+    <div class="modal-title">+ New Task</div>
+    <div class="field">
+      <label>Task</label>
+      <input class="inp" id="pt-text" type="text" placeholder="Describe the task…" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn-primary" onclick="saveProjTask('${projId}')">Continue →</button>
+    </div>
+  `);
+  const inp = document.getElementById('pt-text');
+  inp.focus();
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') saveProjTask(projId); });
+}
+
+function saveProjTask(projId) {
+  const text = document.getElementById('pt-text').value.trim();
+  if (!text) return;
+  const items = DB.items();
+  const newId = Date.now();
+  items.push({ id: newId, text, status: 'inbox', tags: [], done: false, notes: '', project: projId, waitingFor: '', created: newId, focus: false, recur: null });
+  DB.save('items', items);
+  // Open full task modal immediately — project pre-linked, user picks Next/Waiting/Someday
+  openItem(newId);
+}
+
+function openEditProject(projId) {
+  const proj     = DB.projects().find(p => p.id === projId);
+  if (!proj) return;
+  const tags     = DB.tags();
+  const tagsHtml = tags.length
+    ? tags.map(t => {
+        const p = tagPalette(t);
+        const on = (proj.tags||[]).includes(t) ? ' on' : '';
+        return `<span class="pick-chip${on}" data-tag="${esc(t)}" style="background:${p.bg};color:${p.fg}" onclick="togglePickTag(this)">#${esc(t)}</span>`;
+      }).join('')
+    : '';
+  const typeIcon = proj.type === 'role' ? '👤' : proj.type === 'area' ? '🗺️' : '📁';
+  const isDone   = proj.status === 'done';
+
+  showModal(`
+    <div class="modal-title">${typeIcon} ${esc(proj.name)}</div>
+    <div class="field">
+      <label>Name</label>
+      <input class="inp" id="ep-name" type="text" value="${escAttr(proj.name)}" />
+    </div>
+    <div class="field">
+      <label>Tags</label>
+      <div class="tag-picker" id="tag-picker">${tagsHtml}</div>
+    </div>
+    <div class="field">
+      <label>Notes</label>
+      <textarea class="textarea" id="ep-notes">${esc(proj.notes||'')}</textarea>
+    </div>
+    <div class="modal-actions" style="justify-content:space-between">
+      <div style="display:flex;gap:8px">
+        ${isDone
+          ? `<button class="btn-ghost" onclick="unarchiveProject('${projId}')" style="color:#15803d;border-color:#15803d">↩ Restore</button>
+             <button class="btn-danger" onclick="deleteProject('${projId}')">🗑 Delete</button>`
+          : `<button class="btn-ghost" onclick="archiveProject('${projId}')" style="color:var(--muted)">📦 Archive</button>
+             <button class="btn-danger" onclick="deleteProject('${projId}')">🗑 Delete</button>`
+        }
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-ghost" onclick="closeModal()">Cancel</button>
+        <button class="btn-primary" onclick="saveEditProject('${projId}')">Save</button>
+      </div>
+    </div>
+  `);
+}
+
+function saveEditProject(id) {
+  const projects = DB.projects();
+  const proj     = projects.find(p => p.id === id);
+  if (!proj) return;
+  proj.name  = document.getElementById('ep-name').value.trim() || proj.name;
+  proj.notes = document.getElementById('ep-notes').value;
+  proj.tags  = [...document.querySelectorAll('#tag-picker .pick-chip.on')].map(c => c.dataset.tag);
+  DB.save('projects', projects);
+  closeModal();
+  render();
+}
+
+function archiveProject(id) {
+  if (!confirm('Archive this? It will move to the Completed section and its tasks will be hidden from active views.')) return;
+  const projects = DB.projects();
+  const proj     = projects.find(p => p.id === id);
+  if (!proj) return;
+  proj.status = 'done';
+  DB.save('projects', projects);
+  closeModal();
+  render();
+}
+
+function unarchiveProject(id) {
+  const projects = DB.projects();
+  const proj     = projects.find(p => p.id === id);
+  if (!proj) return;
+  proj.status = 'active';
+  DB.save('projects', projects);
+  closeModal();
+  render();
+}
+
+function deleteProject(id) {
+  const projects = DB.projects();
+  const proj     = projects.find(p => p.id === id);
+  if (!proj) return;
+  const taskCount = DB.items().filter(i => i.project === id).length;
+  const warn = taskCount > 0
+    ? `Permanently delete "${proj.name}" and its ${taskCount} linked task${taskCount !== 1 ? 's' : ''}? This cannot be undone.`
+    : `Permanently delete "${proj.name}"? This cannot be undone.`;
+  if (!confirm(warn)) return;
+  DB.save('projects', projects.filter(p => p.id !== id));
+  DB.save('items', DB.items().map(i => i.project === id ? { ...i, project: null } : i));
+  closeModal();
+  render();
+}
+
+// ═══════════════════════════════════════
+//  TAG MODAL
+// ═══════════════════════════════════════
+function openTagModal() {
+  const tags = DB.tags();
+  const existingHtml = tags.length
+    ? tags.map(t => {
+        const p = tagPalette(t);
+        return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
+          <div class="tag-dot" style="background:${p.fg}"></div>
+          <span style="flex:1;font-size:13px">${esc(t)}</span>
+          <button onclick="deleteTag('${esc(t)}')" style="background:none;border:none;color:#ccc;cursor:pointer;font-size:14px;padding:0 4px">×</button>
+        </div>`;
+      }).join('')
+    : `<p style="font-size:13px;color:var(--muted);padding:6px 0">No tags yet.</p>`;
+
+  showModal(`
+    <div class="modal-title">🏷️ Manage Tags</div>
+    <div class="field">
+      <label>Your Tags</label>
+      <div id="existing-tags">${existingHtml}</div>
+    </div>
+    <div class="field" style="margin-top:16px">
+      <label>Add New Tag</label>
+      <div style="display:flex;gap:8px">
+        <input class="inp" id="new-tag" type="text" placeholder="e.g. church, personal, admin…" style="flex:1"/>
+        <button class="btn-primary" onclick="saveNewTag()" style="white-space:nowrap">Add</button>
+      </div>
+      <p style="font-size:11px;color:var(--muted);margin-top:5px">Lowercase, no spaces (hyphens ok)</p>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeModal()">Done</button>
+    </div>
+  `);
+  const inp = document.getElementById('new-tag');
+  inp.focus();
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') saveNewTag(); });
+}
+
+function saveNewTag() {
+  const inp = document.getElementById('new-tag');
+  const val = inp.value.trim().toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9\-]/g,'');
+  if (!val) return;
+  const tags = DB.tags();
+  if (!tags.includes(val)) { tags.push(val); DB.save('tags', tags); }
+  inp.value = '';
+  openTagModal(); // refresh modal
+  render();
+}
+
+function deleteTag(tag) {
+  if (!confirm(`Remove tag "${tag}"? It will be removed from all items.`)) return;
+  DB.save('tags', DB.tags().filter(t => t !== tag));
+  // scrub from items
+  const items = DB.items().map(i => ({ ...i, tags: (i.tags||[]).filter(t => t !== tag) }));
+  DB.save('items', items);
+  if (S.tagFilter === tag) S.tagFilter = null;
+  openTagModal();
+  render();
+}
+
+// ═══════════════════════════════════════
+//  SEARCH
+// ═══════════════════════════════════════
+let searchQuery = '';
+
+function renderSearch(el) {
+  let h = `<div class="view-header"><span class="view-title">🔍 Search</span></div>
+  <div style="display:flex;gap:10px;margin-bottom:20px">
+    <input class="inp" id="search-inp" type="text" placeholder="Search tasks, notes, projects…" value="${escAttr(searchQuery)}" style="flex:1;font-size:15px;padding:10px 14px" />
+  </div>`;
+
+  if (!searchQuery.trim()) {
+    h += `<div class="empty"><div class="e-icon">🔍</div><h3>Start typing to search</h3><p>Searches across all tasks, notes, projects, roles, and areas.</p></div>`;
+    el.innerHTML = h;
+    const inp = document.getElementById('search-inp');
+    if (inp) { inp.focus(); inp.addEventListener('input', e => { searchQuery = e.target.value; renderMain(); }); }
+    return;
+  }
+
+  const q      = searchQuery.toLowerCase();
+  const items  = DB.items().filter(i => i.status !== 'inbox' && !i.done && (i.text||'').toLowerCase().includes(q));
+  const projs  = DB.projects().filter(p => p.status !== 'done' && (p.name||'').toLowerCase().includes(q));
+  const notes  = DB.savedNotes().filter(n => ((n.title||'') + ' ' + (n.content||'')).toLowerCase().includes(q));
+  const total  = items.length + projs.length + notes.length;
+
+  h += `<p style="font-size:12px;color:var(--muted);margin-bottom:16px">${total} result${total!==1?'s':''} for "<strong>${esc(searchQuery)}</strong>"</p>`;
+
+  if (!total) {
+    h += `<div class="empty"><div class="e-icon">🤷</div><h3>No results</h3><p>Try a different word or phrase.</p></div>`;
+  } else {
+    if (items.length) {
+      h += `<div class="section-divider">Tasks (${items.length})</div><div class="item-list">`;
+      items.forEach(i => { h += itemRow(i); });
+      h += `</div>`;
+    }
+    if (projs.length) {
+      h += `<div class="section-divider">Projects, Roles & Areas (${projs.length})</div><div class="item-list">`;
+      projs.forEach(p => {
+        const icon = p.type==='role' ? '👤' : p.type==='area' ? '🗺️' : '📁';
+        h += `<div class="item-row" onclick="openEditProject('${p.id}')">
+          <div class="item-body"><div class="item-text">${icon} ${esc(p.name)}</div></div>
+          <span class="item-chevron">›</span></div>`;
+      });
+      h += `</div>`;
+    }
+    if (notes.length) {
+      h += `<div class="section-divider">Saved Notes (${notes.length})</div>`;
+      notes.forEach(n => {
+        h += `<div class="note-card" onclick="openNoteEditor(${n.id})">
+          <div class="note-card-title">${esc(n.title||'Untitled')}</div>
+          <div class="note-card-snippet">${esc((n.content||'').slice(0,120))}</div>
+        </div>`;
+      });
+    }
+  }
+
+  el.innerHTML = h;
+  const inp = document.getElementById('search-inp');
+  if (inp) {
+    inp.focus();
+    inp.setSelectionRange(inp.value.length, inp.value.length);
+    inp.addEventListener('input', e => { searchQuery = e.target.value; renderMain(); });
+  }
+}
+
+// ═══════════════════════════════════════
+//  BACKUP / EXPORT
+// ═══════════════════════════════════════
+function exportBackup() {
+  const data = {
+    exported: new Date().toISOString(),
+    items:      DB.items(),
+    projects:   DB.projects(),
+    tags:       DB.tags(),
+    journal:    DB.journal(),
+    savedNotes: DB.savedNotes(),
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `gtd-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ═══════════════════════════════════════
+//  NOTION IMPORT
+// ═══════════════════════════════════════
+function importNotionData() {
+  const confirmed = confirm(
+    'Import your Notion Second Brain data?\n\n' +
+    'This will ADD:\n' +
+    '  • 6 Roles  •  8 Areas  •  4 Projects (Rocks)\n' +
+    '  • 20 Tasks  •  2 Notes  •  2 Journal entries\n\n' +
+    'Existing data will NOT be deleted.\n\n' +
+    'Click OK to import.'
+  );
+  if (!confirmed) return;
+
+  // ── PROJECTS (Roles, Areas, Rocks) ────────────
+  const notionProjects = [
+    // ROLES
+    { id:'p_role_cfo',       name:'CFO',                      type:'role',    tags:[],       notes:'Chief Financial Officer — financial stewardship, modeling, board prep', status:'active', created:1746662400000 },
+    { id:'p_role_dlt',       name:'DLT',                      type:'role',    tags:[],       notes:'Directional Leadership Team — Integrator / Executive Director role', status:'active', created:1746662400000 },
+    { id:'p_role_ops',       name:'Operations',               type:'role',    tags:[],       notes:'Church operations leadership and systems', status:'active', created:1746662400000 },
+    { id:'p_role_personal',  name:'Personal',                 type:'role',    tags:[],       notes:'Personal and family responsibilities', status:'active', created:1746662400000 },
+    { id:'p_role_orghealth', name:'Org Health',               type:'role',    tags:[],       notes:'Organizational health, culture, and people', status:'active', created:1746662400000 },
+    { id:'p_role_strategy',  name:'Strategy',                 type:'role',    tags:[],       notes:'Church strategy, vision execution, and long-range planning', status:'active', created:1746662400000 },
+    // AREAS
+    { id:'p_area_facilities',  name:'Facilities',           type:'area', tags:[], notes:'Physical facilities management and maintenance', status:'active', created:1746662400000 },
+    { id:'p_area_newcampus',   name:'New Campus Launch',    type:'area', tags:[], notes:'Multi-site campus expansion and launch planning', status:'active', created:1746662400000 },
+    { id:'p_area_localreach',  name:'Local Reach',          type:'area', tags:[], notes:'Local community outreach, partnerships, and service', status:'active', created:1746662400000 },
+    { id:'p_area_comms',       name:'Communications',       type:'area', tags:[], notes:'Internal and external communications, branding, social', status:'active', created:1746662400000 },
+    { id:'p_area_building',    name:'Building Projects',    type:'area', tags:[], notes:'Capital building projects and construction oversight', status:'active', created:1746662400000 },
+    { id:'p_area_hr',          name:'HR',                   type:'area', tags:[], notes:'Human resources, hiring, compensation, and onboarding', status:'active', created:1746662400000 },
+    { id:'p_area_home',        name:'Home',                 type:'area', tags:[], notes:'Home and family personal projects', status:'active', created:1746662400000 },
+    { id:'p_area_it',          name:'IT',                   type:'area', tags:[], notes:'Technology infrastructure and digital systems', status:'active', created:1746662400000 },
+    // ROCKS (Q2 Projects)
+    { id:'p_rock_anchorpoint', name:'Anchor Point Campus',         type:'project', tags:['Rock'], notes:'Q2 Rock: Launch and strengthen the Anchor Point campus plant', status:'active', created:1746662400000 },
+    { id:'p_rock_financial',   name:'Financial Maturity',          type:'project', tags:['Rock'], notes:'Q2 Rock: 5-year financial model, board readiness, and cash flow discipline', status:'active', created:1746662400000 },
+    { id:'p_rock_decisionlog', name:'Decision Log Update',         type:'project', tags:['Rock'], notes:'Q2 Rock: Document and maintain organizational decision log', status:'active', created:1746662400000 },
+    { id:'p_rock_donordev',    name:'Donor Development Relaunch',  type:'project', tags:['Rock'], notes:'Q2 Rock: Relaunch donor development strategy and asset base cultivation', status:'active', created:1746662400000 },
+  ];
+
+  // ── ITEMS (Tasks) ────────────────────────────
+  const notionItems = [
+    { id:1001, text:'Gabe salary review', status:'next', tags:[], done:false, notes:'', project:'p_role_cfo', waitingFor:'', created:1748304000000, focus:false },
+    { id:1002, text:'Clarity on Events from Meeting with Nick', status:'next', tags:['P1','Agenda Item'], done:false,
+      notes:'- Local Reach Day Clarity\n- International Reach\n  - Add what it looks like for Mantras and Next Level Hospitality\n- Family Conference\n- Follow up with Christopher on International Reach follow through printing',
+      project:'p_role_dlt', waitingFor:'', created:1748300000000, focus:false },
+    { id:1003, text:'💰 Weekly 13-Week Cash Flow Refresh', status:'next', tags:['P2'], done:false,
+      notes:'Routine: Every Monday Morning\nPurpose: Keep the 13-week rolling cash flow projection accurate.\n\nWeekly Steps (15 min):\n1. Update Actual Cash Balance — Pull ending Truist Checking balance from Friday close\n2. Update Actual Giving — Enter actual Sunday giving from Planning Center / Pushpay. Note the variance.\n3. Flag Known Changes — deferred/accelerated payments, large designated gifts, new expenses\n4. Roll Forward — Drop completed week, add new Week 13, maintain 13-week forward view\n5. Review & Flag — Does any week drop below $105K minimum cash threshold?\n\nMonthly (First Monday): Compare prior month actuals to all three scenarios. Adjust giving decline assumptions.\nQuarterly: Re-pull GL vendor timing, update seasonal giving curve, review Wesleyan Savings reserve draw policy.\n\nKey Thresholds:\n- Minimum operating cash: $105,324 (2 weeks payroll)\n- Wesleyan Savings reserve: $803,415\n- Board escalation trigger: Any scenario showing negative cash within 4 weeks\n\nFile: CFO Tool Box > Point Church 13-Week Cash Flow Projection.xlsx',
+      project:'p_role_cfo', waitingFor:'', created:1747828800000, recur:{ freq:'weekly' }, focus:false },
+    { id:1004, text:'Dates for Dinners and Asset Base Gifts', status:'next', tags:['P2','Agenda Item'], done:false, notes:'', project:'p_role_dlt', waitingFor:'', created:1748300000000, focus:false },
+    { id:1005, text:'Run 3 Scenarios on 5-Year Model (Base / Conservative / Aggressive)', status:'next', tags:['P1'], done:false,
+      notes:'1. Base — current assumptions (calibrated 5/21/26)\n2. Conservative — giving growth 1%, staffing 48%, ministries 8%\n3. Aggressive — giving growth 5%, staffing 42%, reach 14%\n\nKey outputs to compare:\n- Year 1 and Year 5 Net Surplus\n- Ending Cash Position trajectory\n- DSCR by year\n- When (if ever) cash goes negative\n- At what point a new campus launch becomes feasible\n\nNote: Deferred maintenance reserve ($135K/yr) is constant across all scenarios.',
+      project:'p_rock_financial', waitingFor:'', created:1747828800000, focus:false },
+    { id:1006, text:'Prepare 5-Year Financial Model Summary for Gabe', status:'next', tags:['P1'], done:false,
+      notes:'Summarize the updated 5-Year Financial Model (v2, 5/21/26) for Gabe.\n\nKey points to cover:\n- Year 1 revenue recalibrated to ~$6.5M (trailing 12-month run rate is $6.79M)\n- Deferred maintenance reserve added at $135K/yr\n- Ridge campus giving at $30/wk reflects early-stage reality (was placeholder $47)\n- DSCR at 1.76x, 4.3 months of operating reserve\n- Pantops revenue concentration at 68.7% — worth flagging\n\nSource: 5 Year Financial Model v2 - 5.21.26.xlsx in CFO Tool Box',
+      project:'p_rock_financial', waitingFor:'', created:1747828800000, focus:false },
+    { id:1007, text:'Prepare Board Recommendations from 5-Year Model', status:'next', tags:['P1'], done:false,
+      notes:'Synthesize the 3-scenario analysis into clear board recommendations.\n\nLikely areas:\n- Summer liquidity — model confirms structural cash gap; recommend reserve draw policy\n- Deferred maintenance — $135K/yr needs team validation; recommend funded reserve\n- Campus launch timing — when does Operating Surplus + Cash support a launch?\n- Debt strategy — DSCR is healthy (1.76x base); refinance or accelerate payoff?\n- Revenue diversification — Pantops at 68.7%; growth targets for Louisa, Waynesboro, Ridge\n- Staffing model — 40% flat rate needs a headcount plan before next hire wave\n\nFormat: Board-ready narrative (1-2 pages) with scenario comparison table.',
+      project:'p_rock_financial', waitingFor:'', created:1747828800000, focus:false },
+    { id:1008, text:'Change 529 Investments', status:'someday', tags:['Personal'], done:false, notes:'', project:'p_role_personal', waitingFor:'', created:1748300000000, focus:false },
+    { id:1009, text:'FU with Matt on Wekas workflow — how do we intro?', status:'next', tags:['P3'], done:false, notes:'', project:'p_role_dlt', waitingFor:'', created:1748300000000, focus:false },
+    { id:1010, text:'FU with Christopher on training for First Responders', status:'next', tags:['P1'], done:false, notes:'', project:'p_area_localreach', waitingFor:'', created:1748300000000, focus:false },
+    { id:1011, text:'Next Steps for Anchor Point', status:'next', tags:['P2','Agenda Item'], done:false, notes:'', project:'p_rock_anchorpoint', waitingFor:'', created:1748300000000, focus:false },
+    { id:1012, text:"Mice in Reed's room", status:'next', tags:['P3'], done:false, notes:'', project:'p_area_home', waitingFor:'', created:1748304000000, focus:false },
+    { id:1013, text:'Follow up on Campus/Department Meetings', status:'next', tags:['P2','Agenda Item'], done:false, notes:'', project:'p_role_dlt', waitingFor:'', created:1748300000000, focus:false },
+    { id:1014, text:'Follow up with Israel Trip', status:'next', tags:['P1'], done:false, notes:'', project:'p_role_cfo', waitingFor:'', created:1748300000000, focus:false },
+    { id:1015, text:'Respond to financial review open items', status:'next', tags:['P1'], done:false, notes:'', project:'p_role_cfo', waitingFor:'', created:1748300000000, focus:false },
+    { id:1016, text:'Determine DT Check-in Procedure (per service or unique)', status:'next', tags:['Agenda Item'], done:false, notes:'', project:'p_role_dlt', waitingFor:'', created:1747699200000, focus:false },
+    { id:1017, text:'Timeline of WWII for Reed', status:'next', tags:[], done:true, notes:'', project:'p_area_home', waitingFor:'', created:1747300000000, focus:false },
+    { id:1018, text:'Write Rosina a song', status:'next', tags:['P3'], done:true, notes:'', project:'p_role_personal', waitingFor:'', created:1746700000000, focus:false },
+    { id:1019, text:'Prep board package', status:'next', tags:['P1'], done:true, notes:'', project:'p_role_cfo', waitingFor:'', created:1747300000000, focus:false },
+    { id:1020, text:'Follow up on Louisa issue', status:'next', tags:[], done:false, notes:'', project:null, waitingFor:'', created:1748400000000, focus:false },
+  ];
+
+  // ── SAVED NOTES ──────────────────────────────
+  const notionSavedNotes = [
+    { id:'sn_notion_1', title:'Notes from Anchor Point 5.7', created:1746662400000, tags:['Anchor Point'],
+      text:'Meeting Note — May 7, 2026\n\nPRE-SERVICE:\n- Good energy, cool diversity\n- Core team did nice job engaging guests — nice job with "you belong here"\n- First Time Guest Check: pipe and drape and sign hanging down is not great. Use the new FTG euro fit or order one branded with AP\n- Is the intent to start at 7:00?\n\nWORSHIP:\n- Lauren did a nice job leading, Olivia sounded great\n- Set way back on stage — felt disconnected from audience\n- Sound was all over the place\n- Quality was shaky — concerned it\'s working against the tenets\n\nVIDEO:\n- Cool idea\n- Editing wasn\'t great — needs to match Sunday quality\n\nMESSAGE:\n- 50ish in attendance\n- Music in lobby playing during message — distracting during silence moments\n- Good content that could have been a more powerful 20 minutes (spoke 37 min)\n- No altar call\n\nPOST MESSAGE WORSHIP:\n- Song selection odd — landed flat\n- Next steps was to serve in Anchor Point\n- What are we pushing people to? The church or Anchor Point? Speaks to the vision.' },
+    { id:'sn_notion_2', title:'CFO — 13-Week Cash Flow Routine', created:1747828800000, tags:['CFO'],
+      text:'ROUTINE: Every Monday Morning\nPurpose: Keep the 13-week rolling cash flow projection accurate by replacing forecasted weeks with actuals and extending the horizon.\n\nWEEKLY STEPS (15 min):\n1. Update Actual Cash Balance — Pull ending Truist Checking balance from Friday close. Replace prior week\'s projected ending cash with actual balance.\n2. Update Actual Giving — Enter actual Sunday giving from Planning Center / Pushpay. Compare to what was projected — note the variance.\n3. Flag Known Changes — Any deferred or accelerated payments? Large designated gifts? New expenses approved since last week?\n4. Roll Forward — Drop the completed week from front. Add a new Week 13 at back using current assumptions. Always maintain a 13-week forward view.\n5. Review & Flag — Does any week drop below $105K minimum cash threshold? Are actuals tracking closer to Base, Optimistic, or Stress? If 3+ weeks trend worse than Base, escalate.\n\nMONTHLY (First Monday):\n- Compare full prior month actuals to all three scenarios\n- Adjust giving decline assumptions if pattern has shifted\n- Update expense lines where timing changed\n\nQUARTERLY:\n- Re-pull GL vendor timing patterns\n- Update seasonal giving curve with current-year data\n- Adjust for structural cost changes (new hires, contract renewals)\n- Review Wesleyan Savings reserve draw policy with board\n\nKEY THRESHOLDS:\n- Minimum operating cash: $105,324 (2 weeks payroll)\n- Wesleyan Savings reserve: $803,415\n- Board escalation trigger: Any scenario showing negative cash within 4 weeks\n\nFILE: CFO Tool Box > Point Church 13-Week Cash Flow Projection.xlsx\n6 sheets: Assumptions, Base Case, Optimistic, Stress Case, Scenario Comparison, Giving History' },
+    { id:'sn_notion_3', title:'Reflection on Sermon — Matthew 5:1-11 (The Beatitudes)', created:1747526400000, tags:['Sermon','Personal'],
+      text:'May 17, 2026 | Scripture: Matthew 5:1-11\n\nTHREE POSTURES OF INTERPRETATION:\n- Reverence — God\'s breath on a page\n- Contemplation — think deeply about the Word\n- Relationship — looking for encounter\n\nKEY INSIGHTS:\n- The Beatitudes describe kingdom character, not a ladder to climb\n- Every Beatitude is ultimately fulfilled in Jesus\n- They invert the world\'s value system\n\nBEATITUDES (condensed):\n1. Poor in spirit → theirs is the kingdom (spiritual bankruptcy, not self-sufficiency)\n2. Those who mourn → shall be comforted (repentance over sin and brokenness)\n3. The meek → shall inherit the earth (strength under control, power submitted to God)\n4. Hunger & thirst for righteousness → shall be filled (urgent holy desire)\n5. The merciful → shall obtain mercy (compassion in action toward the undeserving)\n6. Pure in heart → shall see God (integrity, sincerity, undivided devotion)\n7. Peacemakers → shall be called sons of God (move into conflict with truth and love)\n8. Persecuted for righteousness → theirs is the kingdom (persecution means you\'re walking in step with Him)\n\nDIAGNOSTIC (prayerful reflection):\n- Where am I self-sufficient instead of poor in spirit?\n- What am I unwilling to mourn (repent over)?\n- Where am I grasping instead of meek?\n- What do I truly hunger for — righteousness or comfort/control?\n- Who do I resist being merciful toward?\n- Where is my heart divided?\n- Am I avoiding hard conversations that could lead to peace?\n- Am I surprised by opposition when I aim to live righteously?' },
+  ];
+
+  // ── JOURNAL ENTRIES ──────────────────────────
+  const notionJournal = {
+    '2026-05-12': 'Week of May 11, 2026 | Mood: Steady\n\n- May 12th:\n  - Father, I want to turn toward you. I have been adrift again. Forgive me and restore me.\n  - I have some sort of stirring in my heart about starting something new. Probably a non-profit. Father, if it is from you stoke it.\n  - Jonah is the story of when an instrument forgets its purpose.\n    - What is my driving purpose? Serve God.',
+    '2026-05-17': 'Sermon Notes — Matthew 5:1-11 | Mood: Fine\n\nWhat is the Bible?\n- A story — grand narrative and we are actors in the story\n- The Bible is not about you. When we try to make us the main character it creates a posture of self-centeredness.\n\nTo understand the Bible we have to:\n- Surrender to it — all-in surrender\n- God is right and I am wrong\n- Set aside preconceived ideas\n\nThree postures of interpretation:\n1. Reverence — God\'s breath on a page. What does the Bible say about itself? All Scripture is God-breathed. Useful. Safety is a byproduct of order.\n2. Contemplation — Start with paper Bible. Have another version. Think deeply.\n3. Relationship — looking for encounter\n\nMatthew 5:3 — Poor in Spirit\n"Blessed are the poor in spirit, for theirs is the kingdom of heaven."\n- Not financial poverty but spiritual poverty — knowing you bring nothing to God but need\n- The doorway into kingdom life is low. Pride does not fit through it.\n- Kingdom is not merely future: "theirs IS" — present tense\n\nMatthew 5:4 — Mourning\n- Mourning that is repentance (sad about offense against God), not just regret (sad about consequences)\n- God does not despise the brokenhearted. "They shall be comforted."\n\nMatthew 5:5 — Meek\n- Meekness is not weakness. It is strength under control — power submitted to God.\n- "They shall inherit the earth" — the earth is given to those aligned with the King\n\nMatthew 5:6 — Hunger and Thirst for Righteousness\n- Not "interested in righteousness" but hungry and thirsty — urgent need\n- Righteousness = right standing with God + right living + rightness in the world\n\nMatthew 5:7 — Merciful\n- Mercy is compassion in action toward the undeserving\n- "They shall obtain mercy" — those who\'ve received God\'s mercy become merciful\n\nMatthew 5:8 — Pure in Heart\n- Inner cleanliness and singleness — not living double-life religion\n- "They shall see God" — impurity clouds spiritual sight, purity clarifies it\n\nMatthew 5:9 — Peacemakers\n- Not peace-lovers but peace-MAKERS — move into conflict with truth and love\n- "They shall be called sons of God" because they resemble their Father\n\nMatthew 5:10-11 — Persecuted\n- Jesus assumes righteousness will provoke opposition\n- Persecution must be "for righteousness\' sake" not for being obnoxious or harsh\n- "For My sake" — loyalty to Jesus is the center',
+  };
+
+  // ── TAGS TO ADD ──────────────────────────────
+  const notionTags = ['P1', 'P2', 'P3', 'Agenda Item', 'Rock', 'Personal', 'CFO', 'Anchor Point', 'Sermon'];
+
+  // ── MERGE INTO EXISTING DATA ─────────────────
+  const existingProjects = DB.projects();
+  const existingItems    = DB.items();
+  const existingTags     = DB.tags();
+  const existingNotes    = DB.savedNotes();
+  const existingJournal  = DB.journal();
+
+  // Add projects that don't already exist (by id)
+  const existingProjIds = new Set(existingProjects.map(p => p.id));
+  const newProjects = [...existingProjects, ...notionProjects.filter(p => !existingProjIds.has(p.id))];
+
+  // Add items that don't already exist (by id)
+  const existingItemIds = new Set(existingItems.map(i => i.id));
+  const newItems = [...existingItems, ...notionItems.filter(i => !existingItemIds.has(i.id))];
+
+  // Add tags that don't already exist
+  const tagSet = new Set(existingTags);
+  notionTags.forEach(t => tagSet.add(t));
+  const newTags = [...tagSet];
+
+  // Add saved notes that don't already exist (by id)
+  const existingNoteIds = new Set(existingNotes.map(n => n.id));
+  const newNotes = [...existingNotes, ...notionSavedNotes.filter(n => !existingNoteIds.has(n.id))];
+
+  // Merge journal (don't overwrite existing entries)
+  const newJournal = { ...notionJournal, ...existingJournal };
+
+  // Save everything
+  DB.save('projects',  newProjects);
+  DB.save('items',     newItems);
+  DB.save('tags',      newTags);
+  DB.save('snotes',    newNotes);
+  DB.save('journal',   newJournal);
+
+  render();
+  alert(
+    '✅ Notion import complete!\n\n' +
+    `Added ${notionProjects.filter(p => !existingProjIds.has(p.id)).length} projects/roles/areas\n` +
+    `Added ${notionItems.filter(i => !existingItemIds.has(i.id)).length} tasks\n` +
+    `Added ${notionSavedNotes.filter(n => !existingNoteIds.has(n.id)).length} saved notes\n` +
+    `Merged ${Object.keys(notionJournal).length} journal entries\n\n` +
+    'Head to Roles, Areas, or Projects to see everything.'
+  );
+}
+
+// ═══════════════════════════════════════
+//  NOTES — JOURNAL + SAVED NOTES
+// ═══════════════════════════════════════
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function fmtDateStr(str) {
+  if (!str) return '';
+  const [y, m, d] = str.split('-').map(Number);
+  const DAYS   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const date   = new Date(y, m - 1, d);
+  return `${DAYS[date.getDay()]}, ${MONTHS[m-1]} ${d}, ${y}`;
+}
+
+function renderNotes(el) {
+  const tab = S.notesTab;
+  let h = `<div class="view-header"><span class="view-title">📓 Notes</span></div>`;
+  h += `<div class="notes-tabs">
+    <div class="notes-tab${tab==='journal'?' active':''}" onclick="setNotesTab('journal')">Journal</div>
+    <div class="notes-tab${tab==='saved'?' active':''}" onclick="setNotesTab('saved')">Saved Notes</div>
+  </div>`;
+  h += tab === 'journal' ? buildJournalHtml() : buildSavedNotesHtml();
+  el.innerHTML = h;
+
+  if (tab === 'journal') {
+    const ta = document.getElementById('journal-ta');
+    if (ta) {
+      let saveTimer;
+      ta.addEventListener('input', () => {
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(() => {
+          const j = DB.journal();
+          j[todayStr()] = ta.value;
+          DB.save('journal', j);
+          const ind = document.getElementById('j-saved');
+          if (ind) { ind.textContent = 'Saved ✓'; setTimeout(() => { if (ind) ind.textContent = ''; }, 1500); }
+        }, 600);
+      });
+    }
+  }
+}
+
+function setNotesTab(tab) { S.notesTab = tab; S.nextFilter = null; renderMain(); }
+
+function buildJournalHtml() {
+  const journal = DB.journal();
+  const today   = todayStr();
+  const content = journal[today] || '';
+
+  let h = `<div class="journal-today">
+    <div class="journal-today-date">${fmtDateStr(today)} — Today</div>
+    <div class="md-hint" style="margin-bottom:4px"><code>**bold**</code> <code>*italic*</code> <code># Heading</code> <code>- list</code> <code>1. numbered</code> <code>> quote</code></div>
+    <textarea class="journal-ta" id="journal-ta" placeholder="What's on your mind today? Use **bold**, - lists, # headings…">${esc(content)}</textarea>
+    <div class="journal-saved" id="j-saved"></div>
+  </div>`;
+
+  const past = Object.keys(journal)
+    .filter(d => d !== today && (journal[d]||'').trim())
+    .sort((a,b) => b.localeCompare(a))
+    .slice(0, 60);
+
+  if (past.length) {
+    h += `<div class="section-divider">Past Entries</div>`;
+    past.forEach(date => {
+      const text    = journal[date] || '';
+      const snippet = text.replace(/\n/g,' ').slice(0, 90) + (text.length > 90 ? '…' : '');
+      const isOpen  = S.expandedEntries.has(date);
+      h += `<div class="past-entry">
+        <div class="past-entry-head" onclick="toggleEntry('${date}')">
+          <span class="past-entry-date">${fmtDateStr(date)}</span>
+          ${!isOpen ? `<span class="past-entry-snippet">${esc(snippet)}</span>` : ''}
+          <span style="color:var(--muted);font-size:11px">${isOpen ? '▲' : '▼'}</span>
+        </div>
+        ${isOpen ? `<div class="past-entry-body md-body">${md(text)}</div>
+        <div style="padding:8px 14px 12px;border-top:1px solid var(--border);display:flex;justify-content:flex-end">
+          <button onclick="deleteJournalEntry('${date}')" style="background:none;border:1px solid #f0d0d0;color:#b94040;border-radius:7px;padding:5px 12px;font-size:12px;cursor:pointer;font-family:inherit">Delete Entry</button>
+        </div>` : ''}
+      </div>`;
+    });
+  }
+  return h;
+}
+
+function toggleEntry(date) {
+  S.expandedEntries.has(date) ? S.expandedEntries.delete(date) : S.expandedEntries.add(date);
+  renderMain();
+}
+
+function deleteJournalEntry(date) {
+  if (!confirm(`Delete entry for ${fmtDateStr(date)}?`)) return;
+  const j = DB.journal();
+  delete j[date];
+  DB.save('journal', j);
+  S.expandedEntries.delete(date);
+  renderMain();
+}
+
+function buildSavedNotesHtml() {
+  const notes  = DB.savedNotes();
+  const tags   = DB.tags();
+  let filtered = S.nextFilter ? notes.filter(n => (n.tags||[]).includes(S.nextFilter)) : [...notes];
+  filtered.sort((a,b) => (b.updated||b.created) - (a.updated||a.created));
+
+  let h = `<div style="display:flex;justify-content:flex-end;margin-bottom:14px">
+    <button class="btn-primary" style="font-size:12px;padding:7px 14px" onclick="openNoteEditor(null)">+ New Note</button>
+  </div>`;
+
+  if (tags.length) {
+    h += `<div class="filter-row"><span class="filter-label">Filter:</span>`;
+    tags.forEach(t => {
+      const p  = tagPalette(t);
+      const on = S.nextFilter === t ? ' on' : '';
+      h += `<span class="chip${on}" style="background:${p.bg};color:${p.fg}" onclick="toggleNextFilter('${esc(t)}')">#${esc(t)}</span>`;
+    });
+    h += `</div>`;
+  }
+
+  if (!filtered.length) {
+    h += empty('📝', notes.length ? 'No notes match this filter' : 'No saved notes yet',
+      notes.length ? 'Clear the filter to see all notes.' : 'Hit "+ New Note" to save a framework, meeting note, or reflection.');
+  } else {
+    filtered.forEach(note => {
+      const tagsH   = (note.tags||[]).map(t => {
+        const p = tagPalette(t);
+        return `<span class="item-tag" style="background:${p.bg};color:${p.fg}">#${esc(t)}</span>`;
+      }).join('');
+      const d       = new Date(note.updated || note.created);
+      const dateStr = d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+      const rawSnippet = (note.content||'').replace(/[#*_`>\-]/g,' ').replace(/\n/g,' ').trim().slice(0, 130);
+      const snippet    = rawSnippet + ((note.content||'').length > 130 ? '…' : '');
+      h += `<div class="note-card" onclick="openNoteEditor(${note.id})">
+        <div class="note-card-title">${esc(note.title||'Untitled')}</div>
+        ${snippet ? `<div class="note-card-snippet">${esc(snippet)}</div>` : ''}
+        <div class="note-card-meta">${tagsH}<span class="note-card-date">${dateStr}</span></div>
+      </div>`;
+    });
+  }
+  return h;
+}
+
+function openNoteEditor(id) {
+  const notes = DB.savedNotes();
+  const tags  = DB.tags();
+  const note  = id ? notes.find(n => n.id === id) : null;
+
+  const tagsHtml = tags.length
+    ? tags.map(t => {
+        const p  = tagPalette(t);
+        const on = note && (note.tags||[]).includes(t) ? ' on' : '';
+        return `<span class="pick-chip${on}" data-tag="${esc(t)}" style="background:${p.bg};color:${p.fg}" onclick="togglePickTag(this)">#${esc(t)}</span>`;
+      }).join('')
+    : `<span style="font-size:12px;color:var(--muted)">Add tags via the sidebar first.</span>`;
+
+  showModal(`
+    <div class="modal-title">${note ? '✏️ Edit Note' : '📝 New Note'}</div>
+    <input type="hidden" id="ne-id" value="${id||''}" />
+    <div class="field">
+      <label>Title</label>
+      <input class="inp" id="ne-title" type="text" placeholder="Name this note…" value="${escAttr(note?.title||'')}" />
+    </div>
+    <div class="field">
+      <label>Tags</label>
+      <div class="tag-picker" id="tag-picker">${tagsHtml}</div>
+    </div>
+    <div class="field">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+        <label style="margin:0">Note</label>
+        <div style="display:flex;gap:0;border:1px solid var(--border);border-radius:7px;overflow:hidden">
+          <button id="ne-write-btn" onclick="noteEditorTab('write')" style="background:var(--accent);color:white;border:none;padding:3px 10px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit">Write</button>
+          <button id="ne-preview-btn" onclick="noteEditorTab('preview')" style="background:none;color:var(--muted);border:none;padding:3px 10px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit">Preview</button>
+        </div>
+      </div>
+      <div class="md-hint"><code>**bold**</code> <code>*italic*</code> <code># Heading</code> <code>- list</code> <code>1. numbered</code> <code>> quote</code></div>
+      <textarea class="note-textarea" id="ne-content" placeholder="Write freely — use **bold**, - lists, # headings…">${esc(note?.content||'')}</textarea>
+      <div id="ne-preview" class="md-body" style="display:none;min-height:240px;border:1px solid var(--border);border-radius:8px;padding:11px 13px;background:var(--surface)"></div>
+    </div>
+    <div class="modal-actions">
+      ${note ? `<button class="btn-danger" onclick="deleteNote(${id})">Delete</button>` : ''}
+      <button class="btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn-primary" onclick="saveNote()">Save</button>
+    </div>
+  `);
+  document.getElementById('modal-inner').classList.add('modal-wide');
+  document.getElementById('ne-title').focus();
+}
+
+function noteEditorTab(tab) {
+  const ta      = document.getElementById('ne-content');
+  const preview = document.getElementById('ne-preview');
+  const wBtn    = document.getElementById('ne-write-btn');
+  const pBtn    = document.getElementById('ne-preview-btn');
+  if (tab === 'preview') {
+    preview.innerHTML = md(ta.value);
+    ta.style.display      = 'none';
+    preview.style.display = 'block';
+    wBtn.style.background = 'none';   wBtn.style.color = 'var(--muted)';
+    pBtn.style.background = 'var(--accent)'; pBtn.style.color = 'white';
+  } else {
+    ta.style.display      = 'block';
+    preview.style.display = 'none';
+    wBtn.style.background = 'var(--accent)'; wBtn.style.color = 'white';
+    pBtn.style.background = 'none';   pBtn.style.color = 'var(--muted)';
+  }
+}
+
+function saveNote() {
+  const idVal   = document.getElementById('ne-id').value;
+  const id      = idVal ? parseInt(idVal) : null;
+  const title   = document.getElementById('ne-title').value.trim();
+  const content = document.getElementById('ne-content').value;
+  const tags    = [...document.querySelectorAll('#tag-picker .pick-chip.on')].map(c => c.dataset.tag);
+  const notes   = DB.savedNotes();
+
+  if (id) {
+    const note = notes.find(n => n.id === id);
+    if (note) { note.title = title||'Untitled'; note.content = content; note.tags = tags; note.updated = Date.now(); }
+  } else {
+    notes.push({ id: Date.now(), title: title||'Untitled', content, tags, created: Date.now(), updated: Date.now() });
+  }
+  DB.save('snotes', notes);
+  closeModal();
+  S.view = 'notes'; S.notesTab = 'saved'; S.tagFilter = null;
+  render();
+}
+
+function deleteNote(id) {
+  if (!confirm('Delete this note?')) return;
+  DB.save('snotes', DB.savedNotes().filter(n => n.id !== id));
+  closeModal();
+  render();
+}
+
+// ═══════════════════════════════════════
+//  FOCUS MODE
+// ═══════════════════════════════════════
+function toggleFocus(id) {
+  const items = DB.items();
+  const item  = items.find(i => i.id === id);
+  if (item) { item.focus = !item.focus; DB.save('items', items); render(); }
+}
+
+function renderFocusView(el) {
+  const items   = DB.items();
+  const focused = items.filter(i => i.focus && !i.done);
+  const weekly  = items.filter(i => i.week  && !i.done && !i.focus); // week-only, not already in today
+  const total   = focused.length + weekly.length;
+  let h = header("⭐ Today's Focus", total + ' item' + (total !== 1 ? 's' : ''));
+
+  // ── Today section ──
+  if (!focused.length) {
+    h += `<div class="focus-section" style="text-align:center;padding:24px 16px;margin-bottom:16px">
+      <div style="font-size:28px;margin-bottom:8px">⭐</div>
+      <div style="font-size:14px;font-weight:700;color:var(--accent);margin-bottom:4px">No focus items yet today</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.6">Open any task and check <strong>⭐ Today's Focus</strong> to surface it here.</div>
+    </div>`;
+  } else {
+    h += `<div class="focus-section">
+      <div class="focus-section-title">⭐ Today's non-negotiables</div>
+      <div style="font-size:12px;color:#3b82f6;margin-bottom:10px">Lead the day — don't let the day lead you.</div>
+    </div>`;
+    h += `<div class="item-list">`;
+    focused.forEach(i => { h += itemRow(i); });
+    h += `</div>`;
+  }
+
+  // ── This Week section ──
+  h += `<div class="section-divider" style="margin-top:24px">📅 Also Due This Week</div>`;
+  if (!weekly.length) {
+    h += `<div style="font-size:13px;color:var(--muted);padding:10px 0 4px">No other items flagged for this week. Open a task and check <strong>📅 Due This Week</strong> to add it.</div>`;
+  } else {
+    h += `<div class="item-list">`;
+    weekly.forEach(i => { h += itemRow(i); });
+    h += `</div>`;
+  }
+
+  el.innerHTML = h;
+}
+
+function renderWeekView(el) {
+  const weekly = DB.items().filter(i => i.week && !i.done);
+  let h = header('📅 This Week', weekly.length + ' item' + (weekly.length !== 1 ? 's' : ''));
+
+  if (!weekly.length) {
+    h += `<div class="focus-section" style="text-align:center;padding:24px 16px;background:linear-gradient(135deg,#ecfeff,#cffafe)">
+      <div style="font-size:28px;margin-bottom:8px">📅</div>
+      <div style="font-size:14px;font-weight:700;color:#0891b2;margin-bottom:4px">Nothing flagged for this week</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.6">Open any task and check <strong>📅 Due This Week</strong> to add it here.</div>
+    </div>`;
+  } else {
+    h += `<div class="focus-section" style="background:linear-gradient(135deg,#ecfeff,#cffafe);border-color:#a5f3fc">
+      <div class="focus-section-title" style="color:#0891b2">📅 Commitments for this week</div>
+      <div style="font-size:12px;color:#0e7490;margin-bottom:10px">These need to be done before the week closes.</div>
+    </div>`;
+    h += `<div class="item-list">`;
+    weekly.forEach(i => { h += itemRow(i); });
+    h += `</div>`;
+  }
+  el.innerHTML = h;
+}
+
+// ═══════════════════════════════════════
+//  DAILY REVIEW
+// ═══════════════════════════════════════
+const DAILY_STEPS = [
+  {
+    title: 'Empty Your Inbox',
+    desc:  'Process any new items that came in since yesterday — clarify, file, or delete each one.',
+    go:    'inbox',
+    goLabel: 'Open Inbox',
+  },
+  {
+    title: "Check Today's Calendar",
+    desc:  "What's on today? Any meetings you need to prep for, people to notify, or materials to gather?",
+    go:    null,
+  },
+  {
+    title: 'Review Waiting For',
+    desc:  'Is anything arriving today you need to act on? Anyone you need to follow up with?',
+    go:    'waiting',
+    goLabel: 'Open Waiting For',
+  },
+  {
+    title: "Set Today's Focus",
+    desc:  'Star 2–3 items in Next Actions as your non-negotiables for the day. These go first.',
+    go:    'next',
+    goLabel: 'Open Next Actions',
+  },
+  {
+    title: "Identify Your Win",
+    desc:  'What is the one outcome that would make today a success? Write it below.',
+    go:    null,
+    hasInput: true,
+  },
+  {
+    title: 'Ground Yourself',
+    desc:  'Before the day begins — 60 seconds of prayer, stillness, or a word from Scripture. Lead from rest.',
+    go:    null,
+  },
+];
+
+function renderDailyReview(el) {
+  const today   = todayStr();
+  const stored  = DB.daily();
+  const checked = stored.date === today ? stored.checked : Array(6).fill(false);
+  const winText = stored.date === today ? (stored.win || '') : '';
+  const doneCount = checked.filter(Boolean).length;
+  const pct       = Math.round(doneCount / 6 * 100);
+
+  const greetingHour = new Date().getHours();
+  const greeting = greetingHour < 12 ? 'Good morning' : greetingHour < 17 ? 'Good afternoon' : 'Good evening';
+
+  let h = `<div class="view-header">
+    <div>
+      <span class="view-title">🌅 Daily Review</span>
+      <span class="view-count">${doneCount} of 6 complete</span>
+    </div>
+  </div>`;
+
+  h += `<p style="font-size:13px;color:var(--muted);margin-bottom:14px">${greeting}, Chip · ${fmtDateStr(today)}</p>`;
+  h += `<div class="progress-wrap"><div class="progress-fill" style="width:${pct}%"></div></div>`;
+
+  if (doneCount === 6) {
+    h += `<div style="background:linear-gradient(135deg,#eff6ff,#dbeafe);border:1px solid #bfdbfe;border-radius:14px;padding:22px;text-align:center;margin-bottom:20px">
+      <div style="font-size:32px;margin-bottom:8px">✝️</div>
+      <div style="font-size:16px;font-weight:800;color:var(--accent);margin-bottom:4px">Day prepared. Go lead well.</div>
+      <div style="font-size:13px;color:#3b82f6;line-height:1.6">"Commit your work to the Lord, and your plans will be established." — Prov. 16:3</div>
+    </div>`;
+  }
+
+  DAILY_STEPS.forEach((step, i) => {
+    const isChecked = checked[i];
+    h += `<div class="review-step${isChecked ? ' checked' : ''}" onclick="toggleDailyStep(${i})">
+      <input type="checkbox" class="review-cb" ${isChecked ? 'checked' : ''} onclick="event.stopPropagation();toggleDailyStep(${i})" />
+      <div class="review-body">
+        <div class="review-step-title">${i + 1}. ${step.title}</div>
+        <div class="review-step-desc">${step.desc}</div>
+        ${step.hasInput ? `<textarea
+            id="daily-win"
+            placeholder="e.g. Finish the elder board memo, have a real conversation with Marcus…"
+            onclick="event.stopPropagation()"
+            oninput="saveDailyWin(this.value)"
+            style="width:100%;margin-top:10px;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;font-family:inherit;color:var(--text);background:var(--bg);outline:none;resize:none;min-height:60px;line-height:1.6"
+          >${esc(winText)}</textarea>` : ''}
+        ${step.go ? `<button class="review-go" onclick="event.stopPropagation();setView('${step.go}')">${step.goLabel} →</button>` : ''}
+      </div>
+    </div>`;
+  });
+
+  el.innerHTML = h;
+
+  // Wire up win textarea focus styles
+  const winEl = document.getElementById('daily-win');
+  if (winEl) {
+    winEl.addEventListener('focus', () => { winEl.style.borderColor = 'var(--accent)'; winEl.style.background = '#fff'; });
+    winEl.addEventListener('blur',  () => { winEl.style.borderColor = 'var(--border)'; winEl.style.background = 'var(--bg)'; });
+  }
+}
+
+function toggleDailyStep(idx) {
+  const today   = todayStr();
+  const stored  = DB.daily();
+  const checked = stored.date === today ? [...stored.checked] : Array(6).fill(false);
+  const win     = stored.date === today ? (stored.win || '') : '';
+  checked[idx]  = !checked[idx];
+  localStorage.setItem('g_daily', JSON.stringify({ date: today, checked, win }));
+  renderMain();
+}
+
+function saveDailyWin(val) {
+  const today   = todayStr();
+  const stored  = DB.daily();
+  const checked = stored.date === today ? stored.checked : Array(6).fill(false);
+  localStorage.setItem('g_daily', JSON.stringify({ date: today, checked, win: val }));
+
+  // Sync to Journal — keep a 🏆 Win line at the top of today's entry
+  const journal   = DB.journal();
+  const existing  = journal[today] || '';
+  const WinPrefix = '🏆 Today\'s Win: ';
+  const lines     = existing.split('\n');
+  const filtered  = lines.filter(l => !l.startsWith(WinPrefix));
+  const body      = filtered.join('\n').trimStart();
+  if (val.trim()) {
+    journal[today] = WinPrefix + val.trim() + (body ? '\n\n' + body : '');
+  } else {
+    journal[today] = body;
+  }
+  DB.save('journal', journal);
+}
+
+// ═══════════════════════════════════════
+//  WEEKLY REVIEW
+// ═══════════════════════════════════════
+function weekStartStr() {
+  const d   = new Date();
+  const day = d.getDay(); // 0 = Sunday
+  const mon = new Date(d);
+  mon.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
+  return `${mon.getFullYear()}-${String(mon.getMonth()+1).padStart(2,'0')}-${String(mon.getDate()).padStart(2,'0')}`;
+}
+
+const REVIEW_STEPS = [
+  {
+    title: 'Capture Loose Ends',
+    desc:  'Collect any physical notes, scraps, sticky notes, or mental open loops. Get everything into one place.',
+    go:    null,
+  },
+  {
+    title: 'Empty Your Inbox',
+    desc:  'Process every item in your inbox — clarify what it is, decide what to do, and organize accordingly.',
+    go:    'inbox',
+    goLabel: 'Open Inbox',
+  },
+  {
+    title: 'Review Past Calendar',
+    desc:  'Scan the last two weeks. Any commitments, promises, or follow-ups you missed or need to act on?',
+    go:    null,
+  },
+  {
+    title: 'Review Upcoming Calendar',
+    desc:  'Look ahead two weeks. Any prep actions, people to notify, or resources to gather before those events?',
+    go:    null,
+  },
+  {
+    title: 'Review Waiting For',
+    desc:  'Chase up anything overdue. Note what has arrived. Remove items that are no longer relevant.',
+    go:    'waiting',
+    goLabel: 'Open Waiting For',
+  },
+  {
+    title: 'Review Projects',
+    desc:  'Scan every active project. Does each one have a clear next action? Anything stalled or off-track?',
+    go:    'projects',
+    goLabel: 'Open Projects',
+  },
+  {
+    title: 'Review Next Actions',
+    desc:  'Clear anything already done, outdated, or no longer relevant. Star your priorities for this week.',
+    go:    'next',
+    goLabel: 'Open Next Actions',
+  },
+  {
+    title: 'Review Someday / Maybe',
+    desc:  "Activate anything whose time has come. Delete anything that no longer inspires or aligns with where you're headed.",
+    go:    'someday',
+    goLabel: 'Open Someday / Maybe',
+  },
+];
+
+function renderReview(el) {
+  const week      = weekStartStr();
+  const stored    = DB.review();
+  const checked   = stored.week === week ? stored.checked : Array(8).fill(false);
+  const doneCount = checked.filter(Boolean).length;
+  const pct       = Math.round(doneCount / 8 * 100);
+
+  let h = header('🗓️ Weekly Review', `${doneCount} of 8 complete`);
+  h += `<p style="font-size:12px;color:var(--muted);margin-bottom:14px">Week of ${fmtDateStr(week)} · Resets each Monday</p>`;
+  h += `<div class="progress-wrap"><div class="progress-fill" style="width:${pct}%"></div></div>`;
+
+  if (doneCount === 8) {
+    h += `<div style="background:var(--accent-light);border:1px solid #bfdbfe;border-radius:12px;padding:20px;text-align:center;margin-bottom:20px">
+      <div style="font-size:32px;margin-bottom:8px">🎉</div>
+      <div style="font-size:16px;font-weight:700;color:var(--accent);margin-bottom:4px">Weekly Review Complete!</div>
+      <div style="font-size:12px;color:var(--muted)">Your system is current. Lead from clarity this week.</div>
+    </div>`;
+  }
+
+  REVIEW_STEPS.forEach((step, i) => {
+    const isChecked = checked[i];
+    h += `<div class="review-step${isChecked?' checked':''}" onclick="toggleReviewStep(${i})">
+      <input type="checkbox" class="review-cb" ${isChecked?'checked':''} onclick="event.stopPropagation();toggleReviewStep(${i})" />
+      <div class="review-body">
+        <div class="review-step-title">${i + 1}. ${step.title}</div>
+        <div class="review-step-desc">${step.desc}</div>
+        ${step.go ? `<button class="review-go" onclick="event.stopPropagation();setView('${step.go}')">${step.goLabel} →</button>` : ''}
+      </div>
+    </div>`;
+  });
+
+  el.innerHTML = h;
+}
+
+function toggleReviewStep(idx) {
+  const week    = weekStartStr();
+  const stored  = DB.review();
+  const checked = stored.week === week ? [...stored.checked] : Array(8).fill(false);
+  checked[idx]  = !checked[idx];
+  localStorage.setItem('g_review', JSON.stringify({ week, checked }));
+  renderMain();
+}
+
+// ═══════════════════════════════════════
+//  MODAL HELPERS
+// ═══════════════════════════════════════
+function showModal(html) {
+  document.getElementById('modal-inner').innerHTML = html;
+  document.getElementById('overlay').classList.add('open');
+}
+function closeModal() { document.getElementById('overlay').classList.remove('open'); }
+function overlayClick(e) { if (e.target === document.getElementById('overlay')) closeModal(); }
+
+// ═══════════════════════════════════════
+//  ESCAPE HELPERS
+// ═══════════════════════════════════════
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function escAttr(s) {
+  return String(s||'').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// ═══════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════
+render();
+</script>
+</body>
+</html>

@@ -4,6 +4,20 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>GTD — Chip</title>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+  <style>
+  .sync-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #94a3b8; display: inline-block;
+    margin-left: 8px; flex-shrink: 0;
+    transition: background 0.4s;
+  }
+  .sync-dot.online  { background: #22c55e; }
+  .sync-dot.syncing { background: #f59e0b; animation: pulse 0.8s infinite; }
+  .sync-dot.offline { background: #ef4444; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  </style>
   <style>
     :root {
       --bg: #eef1f8;
@@ -857,6 +871,57 @@ function tagPalette(name) {
 }
 
 // ═══════════════════════════════════════
+//  FIREBASE SYNC
+// ═══════════════════════════════════════
+const FB_CONFIG = {
+  apiKey: "AIzaSyAilIH9WwH0vdsEEqvqjOh5UYTLG9kMckc",
+  authDomain: "gtd-chip-mease21.firebaseapp.com",
+  databaseURL: "https://gtd-chip-mease21-default-rtdb.firebaseio.com",
+  projectId: "gtd-chip-mease21",
+  storageBucket: "gtd-chip-mease21.firebasestorage.app",
+  messagingSenderId: "802083093061",
+  appId: "1:802083093061:web:233bd48412ee24a526012c"
+};
+const fbApp  = firebase.initializeApp(FB_CONFIG);
+const fbDb   = firebase.database();
+const fbRef  = fbDb.ref('gtd');
+let _fbReady = false;
+let _ignoreNext = false; // prevent echo loop
+
+function setSyncDot(state) {
+  const dot = document.getElementById('sync-dot');
+  if (dot) { dot.className = 'sync-dot ' + state; dot.title = state; }
+}
+
+// Listen for remote changes and update localStorage + re-render
+fbRef.on('value', snap => {
+  const data = snap.val();
+  if (!data) { _fbReady = true; return; }
+  if (_ignoreNext) { _ignoreNext = false; _fbReady = true; setSyncDot('online'); return; }
+  const keys = ['items','projects','tags','journal','snotes','review','daily'];
+  keys.forEach(k => {
+    if (data[k] !== undefined) {
+      localStorage.setItem('g_' + k, JSON.stringify(data[k]));
+    }
+  });
+  _fbReady = true;
+  setSyncDot('online');
+  if (document.getElementById('app')) render();
+});
+
+fbDb.ref('.info/connected').on('value', snap => {
+  setSyncDot(snap.val() ? 'online' : 'offline');
+});
+
+function fbSave(key, val) {
+  setSyncDot('syncing');
+  _ignoreNext = true;
+  fbRef.child(key).set(val)
+    .then(() => setSyncDot('online'))
+    .catch(() => { setSyncDot('offline'); _ignoreNext = false; });
+}
+
+// ═══════════════════════════════════════
 //  DATA LAYER
 // ═══════════════════════════════════════
 const DB = {
@@ -867,7 +932,10 @@ const DB = {
   savedNotes() { return JSON.parse(localStorage.getItem('g_snotes')   || '[]'); },
   review()     { return JSON.parse(localStorage.getItem('g_review')   || '{"week":null,"checked":[false,false,false,false,false,false,false,false]}'); },
   daily()      { return JSON.parse(localStorage.getItem('g_daily')    || '{"date":null,"checked":[false,false,false,false,false,false],"win":""}'); },
-  save(key, val) { localStorage.setItem('g_' + key, JSON.stringify(val)); },
+  save(key, val) {
+    localStorage.setItem('g_' + key, JSON.stringify(val));
+    fbSave(key, val);
+  },
 };
 
 // ═══════════════════════════════════════
@@ -914,7 +982,7 @@ function renderSidebar() {
     { id:'review',   icon:'🗓️', label:'Weekly Review',   badge: null },
   ];
 
-  let h = `<div class="sidebar-logo">GTD</div>`;
+  let h = `<div class="sidebar-logo">GTD<span id="sync-dot" class="sync-dot" title="connecting…"></span></div>`;
   h += `<div class="sidebar-section">Lists</div>`;
 
   navItems.forEach(n => {

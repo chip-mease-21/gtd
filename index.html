@@ -1250,9 +1250,13 @@ function renderProjLike(el, type, title, icon) {
       pending.forEach(i => {
         const rB   = i.recur ? `<span class="recur-badge" style="margin-left:6px">🔁 ${i.recur.freq}</span>` : '';
         const naB  = i.status === 'next' ? `<span style="font-size:10px;color:#2563eb;background:#eff6ff;border-radius:10px;padding:1px 6px;font-weight:600;margin-left:6px">⚡ Next</span>` : '';
+        const tH   = (i.tags||[]).map(t => { const p = tagPalette(t); return `<span class="item-tag" style="background:${p.bg};color:${p.fg}">#${esc(t)}</span>`; }).join('');
         h += `<div class="proj-task">
           <input type="checkbox" class="item-cb" onclick="event.stopPropagation();toggleDone(${i.id})" />
-          <span class="proj-task-text" onclick="openItem(${i.id})">${esc(i.text)}${naB}${rB}</span>
+          <div style="flex:1;min-width:0" onclick="openItem(${i.id})">
+            <span class="proj-task-text">${esc(i.text)}${naB}${rB}</span>
+            ${tH ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px">${tH}</div>` : ''}
+          </div>
         </div>`;
       });
       const doneItems = pItems.filter(i => i.done);
@@ -1278,9 +1282,13 @@ function renderProjLike(el, type, title, icon) {
       if (waiting.length) {
         h += `<div style="font-size:10px;color:var(--muted);padding:8px 0 2px;text-transform:uppercase;letter-spacing:0.08em">⏳ Waiting</div>`;
         waiting.forEach(i => {
+          const tH = (i.tags||[]).map(t => { const p = tagPalette(t); return `<span class="item-tag" style="background:${p.bg};color:${p.fg}">#${esc(t)}</span>`; }).join('');
           h += `<div class="proj-task">
             <span style="font-size:12px;color:var(--muted);width:16px">⏳</span>
-            <span class="proj-task-text" onclick="openItem(${i.id})">${esc(i.text)}${i.waitingFor ? ` <span style="color:var(--muted);font-size:11px">· ${esc(i.waitingFor)}</span>` : ''}</span>
+            <div style="flex:1;min-width:0" onclick="openItem(${i.id})">
+              <span class="proj-task-text">${esc(i.text)}${i.waitingFor ? ` <span style="color:var(--muted);font-size:11px">· ${esc(i.waitingFor)}</span>` : ''}</span>
+              ${tH ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:4px">${tH}</div>` : ''}
+            </div>
           </div>`;
         });
       }
@@ -1655,11 +1663,11 @@ function saveItem() {
   if (dest) {
     item.status = dest;
   } else if (item.status === 'inbox') {
-    // No destination chosen and still in inbox — leave it in inbox
-    item.status = 'inbox';
-  } else {
-    // Already categorized but dest cleared — move to someday if project linked, else inbox
+    // No destination chosen — if project was assigned, move to someday; else stay in inbox
     item.status = item.project ? 'someday' : 'inbox';
+  } else {
+    // Already categorized — keep current status
+    item.status = item.status;
   }
 
   if (item.status === 'waiting') {

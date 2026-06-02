@@ -2160,6 +2160,7 @@ function renderNotes(el) {
   el.innerHTML = h;
 
   if (tab === 'journal') {
+    setTimeout(updateJournalPreview, 30);
     const ta = document.getElementById('journal-ta');
     if (ta) {
       let saveTimer;
@@ -2179,6 +2180,15 @@ function renderNotes(el) {
 
 function setNotesTab(tab) { S.notesTab = tab; S.nextFilter = null; renderMain(); }
 
+function updateJournalPreview() {
+  const ta = document.getElementById('journal-ta');
+  const preview = document.getElementById('journal-preview');
+  if (!ta || !preview) return;
+  const val = ta.value.trim();
+  if (val) { preview.innerHTML = md(ta.value); preview.style.display = ''; }
+  else { preview.style.display = 'none'; }
+}
+
 function buildJournalHtml() {
   const journal = DB.journal();
   const today   = todayStr();
@@ -2186,8 +2196,8 @@ function buildJournalHtml() {
 
   let h = `<div class="journal-today">
     <div class="journal-today-date">${fmtDateStr(today)} — Today</div>
-    <div class="md-hint" style="margin-bottom:4px"><code>**bold**</code> <code>*italic*</code> <code># Heading</code> <code>- list</code> <code>1. numbered</code> <code>> quote</code></div>
-    <textarea class="journal-ta" id="journal-ta" placeholder="What's on your mind today? Use **bold**, - lists, # headings…">${esc(content)}</textarea>
+    <textarea class="journal-ta" id="journal-ta" placeholder="What's on your mind today? Use **bold**, - lists, # headings…" oninput="updateJournalPreview()">${esc(content)}</textarea>
+    <div id="journal-preview" class="md-body" style="margin-top:6px;padding:11px 13px;border:1px solid var(--border);border-radius:8px;background:var(--surface);${!content.trim() ? 'display:none' : ''}"></div>
     <div class="journal-saved" id="j-saved"></div>
   </div>`;
 
@@ -2300,16 +2310,9 @@ function openNoteEditor(id) {
       <div class="tag-picker" id="tag-picker">${tagsHtml}</div>
     </div>
     <div class="field">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
-        <label style="margin:0">Note</label>
-        <div style="display:flex;gap:0;border:1px solid var(--border);border-radius:7px;overflow:hidden">
-          <button id="ne-write-btn" onclick="noteEditorTab('write')" style="background:var(--accent);color:white;border:none;padding:3px 10px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit">Write</button>
-          <button id="ne-preview-btn" onclick="noteEditorTab('preview')" style="background:none;color:var(--muted);border:none;padding:3px 10px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit">Preview</button>
-        </div>
-      </div>
-      <div class="md-hint"><code>**bold**</code> <code>*italic*</code> <code># Heading</code> <code>- list</code> <code>1. numbered</code> <code>> quote</code></div>
-      <textarea class="note-textarea" id="ne-content" placeholder="Write freely — use **bold**, - lists, # headings…">${esc(note?.content||'')}</textarea>
-      <div id="ne-preview" class="md-body" style="display:none;min-height:240px;border:1px solid var(--border);border-radius:8px;padding:11px 13px;background:var(--surface)"></div>
+      <label>Note</label>
+      <textarea class="note-textarea" id="ne-content" placeholder="Write freely — use **bold**, - lists, # headings…" oninput="updateNotePreview()">${esc(note?.content||'')}</textarea>
+      <div id="ne-preview" class="md-body" style="min-height:40px;border:1px solid var(--border);border-radius:8px;padding:11px 13px;background:var(--surface);margin-top:6px;${!(note?.content||'') ? 'display:none' : ''}"></div>
     </div>
     <div class="modal-actions">
       ${note ? `<button class="btn-danger" onclick="deleteNote(${id})">Delete</button>` : ''}
@@ -2319,6 +2322,20 @@ function openNoteEditor(id) {
   `);
   document.getElementById('modal-inner').classList.add('modal-wide');
   document.getElementById('ne-title').focus();
+  setTimeout(updateNotePreview, 50);
+}
+
+function updateNotePreview() {
+  const ta = document.getElementById('ne-content');
+  const preview = document.getElementById('ne-preview');
+  if (!ta || !preview) return;
+  const val = ta.value.trim();
+  if (val) {
+    preview.innerHTML = md(ta.value);
+    preview.style.display = '';
+  } else {
+    preview.style.display = 'none';
+  }
 }
 
 function noteEditorTab(tab) {

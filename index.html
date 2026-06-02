@@ -1654,18 +1654,12 @@ function saveItem() {
 
   if (dest) {
     item.status = dest;
-  } else if (item.project) {
-    // Has a project/role/area — never goes to Inbox.
-    // If coming from inbox with no dest chosen, default to Next Action.
-    // If user explicitly cleared all dest buttons, move to Someday (parked, not active).
-    if (item.status === 'inbox') {
-      item.status = 'next';
-    } else {
-      item.status = 'someday';
-    }
-  } else {
-    // No project — clearing destination sends it to Inbox for processing
+  } else if (item.status === 'inbox') {
+    // No destination chosen and still in inbox — leave it in inbox
     item.status = 'inbox';
+  } else {
+    // Already categorized but dest cleared — move to someday if project linked, else inbox
+    item.status = item.project ? 'someday' : 'inbox';
   }
 
   if (item.status === 'waiting') {

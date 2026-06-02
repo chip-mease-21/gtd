@@ -1167,13 +1167,14 @@ function renderTagView(el) {
   const p     = tagPalette(tag);
   const items = DB.items().filter(i => (i.tags||[]).includes(tag) && i.status !== 'inbox');
   const active = items.filter(i => !i.done);
+  const notes  = DB.savedNotes().filter(n => (n.tags||[]).includes(tag));
 
   let h = `<div class="view-header">
     <div><span class="view-title" style="color:${p.fg}">#${esc(tag)}</span>
-    <span class="view-count">${active.length} active</span></div>
+    <span class="view-count">${active.length} active task${active.length !== 1 ? 's' : ''}${notes.length ? ` · ${notes.length} note${notes.length !== 1 ? 's' : ''}` : ''}</span></div>
   </div>`;
 
-  if (!items.length) {
+  if (!items.length && !notes.length) {
     h += empty('🏷️', 'No items tagged #' + esc(tag), 'Items you tag with this will appear here.');
   } else {
     const statuses = ['next','waiting','someday'];
@@ -1185,6 +1186,21 @@ function renderTagView(el) {
       group.forEach(i => { h += itemRow(i); });
       h += `</div>`;
     });
+
+    if (notes.length) {
+      h += `<div class="section-divider">Notes</div>`;
+      notes.forEach(note => {
+        const title   = note.title || 'Untitled';
+        const preview = (note.content || note.text || '').replace(/[#*`>_\-]/g,'').trim().slice(0, 100);
+        h += `<div class="item-row" onclick="openNote(${note.id})" style="flex-direction:column;align-items:flex-start;gap:4px">
+          <div style="display:flex;align-items:center;gap:8px;width:100%">
+            <span style="font-size:15px">📝</span>
+            <span class="item-text" style="font-weight:600">${esc(title)}</span>
+          </div>
+          ${preview ? `<div style="font-size:12px;color:var(--muted);padding-left:23px;line-height:1.4">${esc(preview)}${(note.content||note.text||'').length > 100 ? '…' : ''}</div>` : ''}
+        </div>`;
+      });
+    }
   }
   el.innerHTML = h;
 }

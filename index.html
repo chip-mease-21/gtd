@@ -958,12 +958,22 @@ function render() { renderSidebar(); renderMain(); }
 
 function renderSidebar() {
   const items    = DB.items();
+  const projs    = DB.projects();
   const tags     = DB.tags();
   const inboxN   = items.filter(i => i.status === 'inbox').length;
   const nextN    = items.filter(i => i.status === 'next' && !i.done).length;
   const waitN    = items.filter(i => i.status === 'waiting' && !i.done).length;
   const focusN   = items.filter(i => i.focus && !i.done).length;
   const weekN    = items.filter(i => i.week  && !i.done).length;
+  const openItems = items.filter(i => !i.done && i.status !== 'inbox');
+
+  // Count open tasks linked to each type
+  const projIds  = projs.filter(p => p.type === 'project' && p.status !== 'done').map(p => p.id);
+  const roleIds  = projs.filter(p => p.type === 'role'    && p.status !== 'done').map(p => p.id);
+  const areaIds  = projs.filter(p => p.type === 'area'    && p.status !== 'done').map(p => p.id);
+  const projTaskN = openItems.filter(i => projIds.includes(i.project)).length;
+  const roleTaskN = openItems.filter(i => roleIds.includes(i.project)).length;
+  const areaTaskN = openItems.filter(i => areaIds.includes(i.project)).length;
 
   const navItems = [
     { id:'all',      icon:'📋', label:'All Open Tasks',  badge: nextN + waitN },
@@ -974,9 +984,9 @@ function renderSidebar() {
     { id:'next',     icon:'⚡', label:'Next Actions',    badge: nextN },
     { id:'waiting',  icon:'⏳', label:'Waiting For',     badge: waitN },
     { id:'someday',  icon:'💭', label:'Someday / Maybe', badge: null },
-    { id:'projects', icon:'📁', label:'Projects',        badge: null },
-    { id:'roles',    icon:'👤', label:'Roles',           badge: null },
-    { id:'areas',    icon:'🗺️', label:'Areas',           badge: null },
+    { id:'projects', icon:'📁', label:'Projects',        badge: projTaskN || null },
+    { id:'roles',    icon:'👤', label:'Roles',           badge: roleTaskN || null },
+    { id:'areas',    icon:'🗺️', label:'Areas',           badge: areaTaskN || null },
     { id:'notes',    icon:'📓', label:'Notes',           badge: null },
     { id:'search',   icon:'🔍', label:'Search',          badge: null },
     { id:'review',   icon:'🗓️', label:'Weekly Review',   badge: null },
@@ -2452,6 +2462,7 @@ function renderFocusView(el) {
 }
 
 function renderWeekView(el) {
+  const projs  = DB.projects();
   const weekly = DB.items().filter(i => i.week && !i.done);
   let h = header('📅 This Week', weekly.length + ' item' + (weekly.length !== 1 ? 's' : ''));
 
@@ -2466,9 +2477,30 @@ function renderWeekView(el) {
       <div class="focus-section-title" style="color:#0891b2">📅 Commitments for this week</div>
       <div style="font-size:12px;color:#0e7490;margin-bottom:10px">These need to be done before the week closes.</div>
     </div>`;
-    h += `<div class="item-list">`;
-    weekly.forEach(i => { h += itemRow(i); });
-    h += `</div>`;
+
+    // Group by project/area/role
+    const linked   = weekly.filter(i => i.project);
+    const unlinked = weekly.filter(i => !i.project);
+    const groupIds = [...new Set(linked.map(i => i.project))];
+
+    if (groupIds.length) {
+      groupIds.forEach(pid => {
+        const proj  = projs.find(p => p.id === pid);
+        const pType = proj ? (proj.type || 'project') : 'project';
+        const pIcon = pType === 'role' ? '👤' : pType === 'area' ? '🗺️' : '📁';
+        const group = linked.filter(i => i.project === pid);
+        h += `<div class="section-divider">${pIcon} ${esc(proj ? proj.name : 'Unknown')}</div>
+              <div class="item-list">`;
+        group.forEach(i => { h += itemRow(i, true); });
+        h += `</div>`;
+      });
+    }
+    if (unlinked.length) {
+      if (groupIds.length) h += `<div class="section-divider">Unlinked</div>`;
+      h += `<div class="item-list">`;
+      unlinked.forEach(i => { h += itemRow(i); });
+      h += `</div>`;
+    }
   }
   el.innerHTML = h;
 }

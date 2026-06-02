@@ -1192,7 +1192,7 @@ function renderTagView(el) {
       notes.forEach(note => {
         const title   = note.title || 'Untitled';
         const preview = (note.content || note.text || '').replace(/[#*`>_\-]/g,'').trim().slice(0, 100);
-        h += `<div class="item-row" onclick="openNote(${note.id})" style="flex-direction:column;align-items:flex-start;gap:4px">
+        h += `<div class="item-row" onclick="openNoteEditor(${note.id})" style="flex-direction:column;align-items:flex-start;gap:4px">
           <div style="display:flex;align-items:center;gap:8px;width:100%">
             <span style="font-size:15px">📝</span>
             <span class="item-text" style="font-weight:600">${esc(title)}</span>

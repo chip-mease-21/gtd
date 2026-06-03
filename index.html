@@ -2453,9 +2453,29 @@ function renderFocusView(el) {
   if (!weekly.length) {
     h += `<div style="font-size:13px;color:var(--muted);padding:10px 0 4px">No other items flagged for this week. Open a task and check <strong>📅 Due This Week</strong> to add it.</div>`;
   } else {
-    h += `<div class="item-list">`;
-    weekly.forEach(i => { h += itemRow(i); });
-    h += `</div>`;
+    const projs    = DB.projects();
+    const linked   = weekly.filter(i => i.project);
+    const unlinked = weekly.filter(i => !i.project);
+    const groupIds = [...new Set(linked.map(i => i.project))];
+
+    if (groupIds.length) {
+      groupIds.forEach(pid => {
+        const proj  = projs.find(p => p.id === pid);
+        const pType = proj ? (proj.type || 'project') : 'project';
+        const pIcon = pType === 'role' ? '👤' : pType === 'area' ? '🗺️' : '📁';
+        const group = linked.filter(i => i.project === pid);
+        h += `<div class="section-divider" style="margin-top:12px">${pIcon} ${esc(proj ? proj.name : 'Unknown')}</div>
+              <div class="item-list">`;
+        group.forEach(i => { h += itemRow(i, true); });
+        h += `</div>`;
+      });
+    }
+    if (unlinked.length) {
+      if (groupIds.length) h += `<div class="section-divider" style="margin-top:12px">Unlinked</div>`;
+      h += `<div class="item-list">`;
+      unlinked.forEach(i => { h += itemRow(i); });
+      h += `</div>`;
+    }
   }
 
   el.innerHTML = h;
